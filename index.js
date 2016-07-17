@@ -1,4 +1,3 @@
-const Joi = require('joi')
 const {
   GraphQLSchema,
   GraphQLString,
@@ -7,14 +6,15 @@ const {
   GraphQLObjectType,
   GraphQLInputObjectType,
   GraphQLList,
+  GraphQLInterfaceType,
   graphql
 } = require('graphql')
 const {
   uniqueId,
   map,
   find,
-  assign,
-  mapValues
+  mapValues,
+  capitalize
 } = require('lodash')
 
 const joiTypes = {}
@@ -22,7 +22,7 @@ const joiTypes = {}
 const joiDescToGraphQLType = (desc, isInput) => {
   let typeName = (
     (isInput ? 'Input' : '') +
-    (map(desc.meta, 'name')[0] || 'WarningUnknownType' + uniqueId())
+    (map(desc.meta, 'name')[0] || 'Anon' + uniqueId())
   )
   const ObjectType = isInput ? GraphQLInputObjectType : GraphQLObjectType
   switch (desc.type) {
@@ -50,23 +50,21 @@ const joiDescToGraphQLType = (desc, isInput) => {
       if (desc.items.length === 1) {
         type = joiDescToGraphQLType(desc.items[0], isInput)
       } else {
-        const fields = {}
-        typeName = map(desc.items, (item) =>
-          (isInput ? 'Input' : '') +
-          (map(item.meta, 'name')[0] || 'WarningUnknownType' + uniqueId())
-        ).join('And')
+        typeName = map(desc.items, (d) =>
+          (isInput ? 'Input' : '') + capitalize(d.type) || 'Anon' + uniqueId()
+        ).join('Or')
         if (joiTypes[typeName]) {
           type = joiTypes[typeName]
         } else {
-          desc.items.forEach((item) => {
-            const itemFields = mapValues(desc.children, (desc) =>
-              ({ type: joiDescToGraphQLType(desc, isInput) }))
-            assign(fields, itemFields)
-          })
-          type = new ObjectType({
+          type = new GraphQLInterfaceType({
             name: typeName,
             description: desc.description,
-            fields: fields
+            types: desc.items.map((d) =>
+              joiDescToGraphQLType(d, isInput)),
+            resolveType: (val) => {
+              console.log('moo', val)
+              return true
+            }
           })
         }
       }
@@ -75,41 +73,57 @@ const joiDescToGraphQLType = (desc, isInput) => {
   }
 }
 
-// const schema = Joi.object().keys({
-//   username: Joi.string().alphanum().min(3).max(30).required(),
-//   password: Joi.string().regex(/^[a-zA-Z0-9]{3,30}$/),
-//   access_token: [Joi.string(), Joi.number()],
-//   birthyear: Joi.number().integer().min(1900).max(2013),
-//   email: Joi.string().email()
-// }).with('username', 'birthyear').without('password', 'access_token')
+const { object, string, number, array } = require('joi')
 
-const foo = ({
-  id: Joi.string()
-}, Joi.object().keys({
-  title: Joi.string(),
-  author: Joi.object().keys({
-    name: Joi.string(),
-    email: Joi.string()
-  })
-}).meta({ name: 'Hello' })
+const Article = object({
+  id: number(),
+  title: string(),
+  author: object({
+    name: string(),
+    bio: string()
+  }),
+  votes: array().items(
+    object({ foo: string() }),
+    object({ bar: string() })
+  )
+  // sections: array().items(
+  //   object({
+  //     type: string().valid('image'),
+  //     src: string()
+  //   }),
+  //   object({
+  //     type: string().valid('text'),
+  //     body: string()
+  //   })
+  // )
+  // footerArticles: {
+  //   args: { limit: number().integer().max(100) },
+  //   fields: array().items(Article)
+  // }
+})
 
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
     name: 'RootQueryType',
     fields: {
-      h: {
-        args: ,
-        type: joiDescToGraphQLType(Joi.object().keys({
-          hello: Joi.string(),
-          world: Joi.string()
-        }).meta({ name: 'Hello' }).describe(), false),
+      article: {
+        args: {},
+        type: joiDescToGraphQLType(Article.describe(), false),
         resolve: (root, opts) => {
-          console.log('moo', root)
-          return { hello: '', world: '' }
+          console.log('moo', root, opts)
+          return {
+            id: 1,
+            title: 'Wont believe',
+            author: {
+              name: 'Craig'
+            },
+            votes: [{ foo: 'bar' }]
+          }
         }
       }
     }
   })
 })
 
-graphql(schema, '{ h { hello world } }').then(console.log.bind(console))
+graphql(schema, '{ article { id votes { foo } } }')
+  .then((r) => console.log('moo', JSON.stringify(r)))
