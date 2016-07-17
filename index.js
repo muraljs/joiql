@@ -22,11 +22,21 @@ const Joi = require('joi')
 
 const cachedTypes = {}
 
+const descToStub = (desc) => {
+  return {
+    string: '',
+    array: map(desc.items, descToStub),
+    object: mapValues(desc.children, descToStub),
+    number: 0
+  }[desc.type]
+}
+
 const validateArgs = (desc, args) => {
   const argsSchema = map(desc.meta, 'args')[0]
-  if (!argsSchema) return
-  const { error } = Joi.validate(args, argsSchema)
+  if (!argsSchema) return {}
+  const { data, error } = Joi.validate(args, argsSchema)
   if (error) throw error
+  return data
 }
 
 const descToArgs = (desc) => {
@@ -98,7 +108,11 @@ const descToSchema = (desc) => {
   return {
     type: descToType(desc),
     args: descToArgs(desc) || {},
-    description: desc.description || ''
+    description: desc.description || '',
+    resolve: (parent, opts) => {
+      validateArgs(opts)
+      return descToStub(desc)
+    }
   }
 }
 
@@ -127,7 +141,8 @@ Article.footerArticles = array().items(Article).meta({
   args: { limit: number().integer().max(100) }
 })
 Article = object(Article).meta({
-  name: 'Article'
+  name: 'Article',
+  args: { id: number().max(10) }
 })
 
 const schema = new GraphQLSchema({
@@ -140,10 +155,25 @@ const schema = new GraphQLSchema({
 })
 
 graphql(schema, `{
-  article {
+  article(id: 1) {
     id
-    footerArticles(limit: 100) {
+    title
+    author {
+      name
+      bio
+    }
+    sections {
+      ... on ImageSection {
+        type
+        src
+      }
+      ... on TextSection {
+        type
+        body
+      }
+    }
+    footerArticles {
       id
     }
   }
-}`).then((r) => console.log('RES', r.errors, JSON.stringify(r)))
+}`).then((r) => console.log('RES', r))
