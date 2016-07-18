@@ -107,6 +107,7 @@ const descsToSchema = (descs, done) => {
         console.log('parent')
         query[key] = { args: opts, fields: {} }
         return new Promise((resolve) => setTimeout(() => {
+          console.log('resolve')
           return resolve(done(query))
         }))
       } else {
