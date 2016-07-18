@@ -22,15 +22,6 @@ const Joi = require('joi')
 
 const cachedTypes = {}
 
-const descToStub = (desc) => {
-  return {
-    string: '',
-    array: map(desc.items, descToStub),
-    object: mapValues(desc.children, descToStub),
-    number: 0
-  }[desc.type]
-}
-
 const validateArgs = (desc, args) => {
   const argsSchema = map(desc.meta, 'args')[0]
   if (!argsSchema) return {}
@@ -65,7 +56,7 @@ const descToType = (desc, isInput) => {
       } else {
         const type = new ObjectType({
           name: typeName,
-          fields: mapValues(desc.children, descToSchema)
+          fields: descsToSchema(desc.children)
         })
         cachedTypes[typeName] = type
         return type
@@ -104,17 +95,33 @@ const descToType = (desc, isInput) => {
   }
 }
 
-const descToSchema = (desc) => {
-  return {
+const descsToSchema = (descs, done) => {
+  const query = {}
+  return mapValues(descs, (desc, key) => ({
     type: descToType(desc),
     args: descToArgs(desc) || {},
     description: desc.description || '',
-    resolve: (parent, opts) => {
-      validateArgs(opts)
-      return descToStub(desc)
+    resolve: (parent, opts, root) => {
+      validateArgs(desc, opts)
+      if (!parent) {
+        console.log('parent')
+        query[key] = { args: opts, fields: {} }
+        return new Promise((resolve) => setTimeout(() => {
+          return resolve(done(query))
+        }))
+      } else {
+        if (key === 'footerArticles') console.log('not', key, parent[key])
+        return parent[key]
+      }
     }
-  }
+  }))
 }
+// query.article.args => { id: 1 }
+// query.article.fields.footerArticles.args => { limit: 100 }
+
+// -----------------------------------------------------------------------------
+// Not included in the library
+// -----------------------------------------------------------------------------
 
 const { object, string, number, array } = require('joi')
 
@@ -145,16 +152,33 @@ Article = object(Article).meta({
   args: { id: number().max(10) }
 })
 
+const article = {
+  id: 1,
+  title: 'Foo',
+  author: {
+    name: 'Craig',
+    bio: 'Da Best'
+  },
+  sections: [
+    { type: 'text', body: 'Hello' },
+    { type: 'image', src: 'foo.jpg' }
+  ]
+}
+article.footerArticles = [article]
+
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
     name: 'RootQueryType',
-    fields: {
-      article: descToSchema(Article.describe())
-    }
+    fields: descsToSchema({
+      article: Article.describe()
+    }, (query) => {
+      console.log('QUERY', query)
+      return article
+    })
   })
 })
 
-graphql(schema, `{
+const query = `{
   article(id: 1) {
     id
     title
@@ -172,8 +196,10 @@ graphql(schema, `{
         body
       }
     }
-    footerArticles {
+    footerArticles(limit: 100) {
       id
     }
   }
-}`).then((r) => console.log('RES', r))
+}`
+
+graphql(schema, query).then((r) => console.log('RES', r))
