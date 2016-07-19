@@ -1,6 +1,7 @@
 const joiql = require('./')
-const { graphql } = require('graphql')
 const { object, string, number, array, date } = require('joi')
+const app = require('express')()
+const graphqlHTTP = require('express-graphql')
 
 const Film = object({
   title: string(),
@@ -29,23 +30,19 @@ const schema = joiql({
     // db.people.find({ id: query.person.args.id })
     res.person = { name: 'Spike Jonze' }
     // db.films.find({ id: { $in: res.person.film_ids } })
-    if (query.person.fields.films) res.person.films = [
-      { title: 'Her', producers: ['Annapurna'] },
-      { title: 'Adaptation', producers: ['Kaufman'] }
-    ]
+    if (query.person.fields.films) {
+      res.person.films = [
+        { title: 'Her', producers: ['Annapurna'] },
+        { title: 'Adaptation', producers: ['Kaufman'] }
+      ]
+    }
   }
   return res
 })
 
-graphql(schema, `{
-  film {
-    title
-  }
-  person(id: 1) {
-    name
-    films {
-      title
-      producers
-    }
-  }
-}`).then((r) => console.log('RES', r))
+app.use('/graphql', graphqlHTTP({
+  schema: schema,
+  graphiql: true
+}))
+
+app.listen(3000, () => console.log('listening on 3000'))
