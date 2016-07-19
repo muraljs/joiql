@@ -7,6 +7,8 @@ const {
   GraphQLInputObjectType,
   GraphQLList,
   GraphQLUnionType,
+  GraphQLBoolean,
+  GraphQLNonNull,
   graphql
 } = require('graphql')
 const {
@@ -46,18 +48,25 @@ const descToType = (desc, isInput) => {
     (isInput ? 'Input' : '') +
     (map(desc.meta, 'name')[0] || 'Anon' + uniqueId())
   )
-  const ObjectType = isInput ? GraphQLInputObjectType : GraphQLObjectType
-  switch (desc.type) {
-    case 'number':
+  const required = (
+    isInput &&
+    desc.flags &&
+    desc.flags.presence &&
+    desc.flags.presence === 'required'
+  )
+  const type = {
+    boolean: () => GraphQLBoolean,
+    date: () => GraphQLString,
+    string: () => GraphQLString,
+    number: () => {
       const isInteger = !!find(desc.rules, { name: 'integer' })
       return isInteger ? GraphQLInt : GraphQLFloat
-    case 'date':
-    case 'string':
-      return GraphQLString
-    case 'object':
+    },
+    object: () => {
       if (cachedTypes[typeName]) {
         return cachedTypes[typeName]
       } else {
+        const ObjectType = isInput ? GraphQLInputObjectType : GraphQLObjectType
         const type = new ObjectType({
           name: typeName,
           fields: descsToSchema(desc.children)
@@ -65,7 +74,8 @@ const descToType = (desc, isInput) => {
         cachedTypes[typeName] = type
         return type
       }
-    case 'array':
+    },
+    array: () => {
       let type
       if (desc.items.length === 1) {
         type = descToType(desc.items[0], isInput)
@@ -96,7 +106,9 @@ const descToType = (desc, isInput) => {
       }
       if (!cachedTypes[typeName]) cachedTypes[typeName] = type
       return new GraphQLList(type)
-  }
+    }
+  }[desc.type]()
+  return required ? new GraphQLNonNull(type) : type
 }
 
 const descsToSchema = (descs, done) => {
@@ -207,7 +219,7 @@ joiql({
   }),
   article: Article
 }, `{
-  user {
+  user(id: "foo") {
     id
   }
   article(id: 1) {
