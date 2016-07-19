@@ -162,94 +162,35 @@ const joiql = (jois, query, done) => {
 // Not included in the library
 // -----------------------------------------------------------------------------
 
-const { object, string, number, array, boolean } = require('joi')
-
-// Schema
-let Article = {
-  id: number(),
-  title: string(),
-  author: object({
-    name: string(),
-    bio: string()
-  }),
-  sections: array().items(
-    object({
-      type: string().valid('image'),
-      src: string()
-    }).meta({ name: 'ImageSection' }),
-    object({
-      type: string().valid('text'),
-      body: string()
-    }).meta({ name: 'TextSection' })
-  )
-}
-Article.footerArticles = array().items(Article).meta({
-  name: 'FooterArticles',
-  args: { limit: number().integer().max(100) }
-})
-Article = object(Article).meta({
-  name: 'Article',
-  args: { id: number().max(10) }
-})
-
-// Stub
-const articleStub = {
-  id: 1,
-  title: 'Foo',
-  author: {
-    name: 'Craig',
-    bio: 'Da Best'
-  },
-  sections: [
-    { type: 'text', body: 'Hello' },
-    { type: 'image', src: 'foo.jpg' }
-  ]
-}
+const { object, string, number, array, date } = require('joi')
 
 // Run it
-joiql({
-  user: object({
-    id: string(),
-    name: string(),
-    friends: array().items(object({ name: string() })).meta({
-      args: { public: boolean().default(true) }
-    })
-  }).meta({
-    args: { id: string().required() }
+const Film = object({
+  title: string(),
+  producers: array().items(string()),
+  characters: array().items(Person).meta({
+    args: { limit: number().integer() }
   }),
-  article: Article
+  release_date: date()
+})
+const Person = object({
+  name: string(),
+  films: array().items(Film)
+})
+joiql({
+  person: Person,
+  film: Film
 }, `{
-  user(id: "foo") {
-    id
-  }
-  article(id: 1) {
-    id
-    title
-    author {
-      name
-      bio
-    }
-    sections {
-      ... on ImageSection {
-        type
-        src
-      }
-      ... on TextSection {
-        type
-        body
-      }
-    }
-    footerArticles(limit: 100) {
-      id
+  person {
+    name
+    films {
+      title
+      producers
+      characters(limit: 10)
     }
   }
 }`, (query) => {
-  const res = { user: { id: 'craig' } }
-  if (query.article) {
-    res.article = articleStub
-    if (query.article.fields.footerArticles) {
-      res.article.footerArticles = [articleStub]
-    }
-  }
+  const res = {}
+  console.log('mooo', query)
   return res
 }).then((r) => console.log('RES', r))
