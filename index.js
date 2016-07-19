@@ -146,7 +146,7 @@ const parseQuery = (query) => {
   return definitions.map((d) => mapSelection(d.selectionSet.selections))[0]
 }
 
-const joiql = (jois, query, done) => {
+export default const joiql = (jois, query, done) => {
   const descs = mapValues(jois, (j) => j.describe())
   const resolve = memoize(() => done(parseQuery(query)))
   const schema = new GraphQLSchema({
@@ -157,40 +157,3 @@ const joiql = (jois, query, done) => {
   })
   return graphql(schema, query)
 }
-
-// -----------------------------------------------------------------------------
-// Not included in the library
-// -----------------------------------------------------------------------------
-
-const { object, string, number, array, date } = require('joi')
-
-// Run it
-const Film = object({
-  title: string(),
-  producers: array().items(string()),
-  characters: array().items(Person).meta({
-    args: { limit: number().integer() }
-  }),
-  release_date: date()
-})
-const Person = object({
-  name: string(),
-  films: array().items(Film)
-})
-joiql({
-  person: Person,
-  film: Film
-}, `{
-  person {
-    name
-    films {
-      title
-      producers
-      characters(limit: 10)
-    }
-  }
-}`, (query) => {
-  const res = {}
-  console.log('mooo', query)
-  return res
-}).then((r) => console.log('RES', r))
