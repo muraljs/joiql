@@ -9,7 +9,6 @@ const {
   GraphQLUnionType,
   graphql
 } = require('graphql')
-const { parse } = require('graphql')
 const {
   uniqueId,
   map,
@@ -22,6 +21,7 @@ const {
   uniq,
   memoize
 } = require('lodash')
+const { parse } = require('graphql')
 const Joi = require('joi')
 
 const cachedTypes = {}
@@ -150,7 +150,7 @@ const joiql = (jois, query, done) => {
 // Not included in the library
 // -----------------------------------------------------------------------------
 
-const { object, string, number, array } = require('joi')
+const { object, string, number, array, boolean } = require('joi')
 
 // Schema
 let Article = {
@@ -196,13 +196,19 @@ const articleStub = {
 
 // Run it
 joiql({
-  foo: object({
-    bar: string()
+  user: object({
+    id: string(),
+    name: string(),
+    friends: array().items(object({ name: string() })).meta({
+      args: { public: boolean().default(true) }
+    })
+  }).meta({
+    args: { id: string().required() }
   }),
   article: Article
 }, `{
-  foo {
-    bar
+  user {
+    id
   }
   article(id: 1) {
     id
@@ -226,7 +232,7 @@ joiql({
     }
   }
 }`, (query) => {
-  const res = { foo: { bar: 'baz' } }
+  const res = { user: { id: 'craig' } }
   if (query.article) {
     res.article = articleStub
     if (query.article.fields.footerArticles) {
