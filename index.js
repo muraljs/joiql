@@ -8,8 +8,7 @@ const {
   GraphQLList,
   GraphQLUnionType,
   GraphQLBoolean,
-  GraphQLNonNull,
-  graphql
+  GraphQLNonNull
 } = require('graphql')
 const {
   uniqueId,
@@ -21,7 +20,8 @@ const {
   keys,
   isEqual,
   uniq,
-  memoize
+  debounce,
+  assign
 } = require('lodash')
 const { parse } = require('graphql')
 const Joi = require('joi')
@@ -111,15 +111,21 @@ const descToType = (desc, isInput) => {
   return required ? new GraphQLNonNull(type) : type
 }
 
-const descsToSchema = (descs, done) => {
+const descsToSchema = (descs, done = () => {}) => {
+  const query = {}
+  let res
+  const fin = debounce(() => { res = done(query) })
   return mapValues(descs, (desc, key) => ({
     type: descToType(desc),
     args: descToArgs(desc) || {},
     description: desc.description || '',
-    resolve: (parent, opts, root) => {
-      validateArgs(desc, opts)
-      if (!parent) return done()[key]
-      else return parent[key]
+    resolve: (source, args, root, { fieldASTs }) => {
+      assign(query, mapSelection(fieldASTs))
+      validateArgs(desc, args)
+      fin()
+      if (!source) {
+        return new Promise((resolve) => setTimeout(() => resolve(res[key])))
+      } else return source[key]
     }
   }))
 }
@@ -141,19 +147,12 @@ const mapSelection = (selections) => {
   }))
 }
 
-const parseQuery = (query) => {
-  const definitions = parse(query).definitions
-  return definitions.map((d) => mapSelection(d.selectionSet.selections))[0]
-}
-
-export default const joiql = (jois, query, done) => {
+module.exports = (jois, done) => {
   const descs = mapValues(jois, (j) => j.describe())
-  const resolve = memoize(() => done(parseQuery(query)))
-  const schema = new GraphQLSchema({
+  return new GraphQLSchema({
     query: new GraphQLObjectType({
       name: 'RootQueryType',
-      fields: descsToSchema(descs, resolve)
+      fields: descsToSchema(descs, done)
     })
   })
-  return graphql(schema, query)
 }
