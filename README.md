@@ -5,6 +5,7 @@ WIP to generate a GraphQL schema from a Joi schema.
 ## Example
 
 ````javascript
+const joiql = require('joiql')
 const { object, string, number, array, date } = require('joi')
 
 const Film = object({
@@ -51,3 +52,8 @@ joiql({
   console.log(result)
 })
 ````
+
+## TODO
+
+* Allow `(jois, query, ...resolves)` that `_.flow`s the resolves for middleware
+* Figure out how to do circular dependencies (ideally with Joi `lazy`)
