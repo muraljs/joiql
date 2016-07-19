@@ -16,12 +16,14 @@ const Film = object({
   // }),
   release_date: date()
 })
+
 const Person = object({
   name: string(),
   films: array().items(Film)
 }).meta({
   args: { id: number().required() }
 })
+
 joiql({
   person: Person,
   film: Film
