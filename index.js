@@ -9,14 +9,18 @@ const {
   GraphQLUnionType,
   graphql
 } = require('graphql')
+const { parse } = require('graphql')
 const {
   uniqueId,
   map,
+  fromPairs,
   find,
   mapValues,
   capitalize,
   keys,
-  isEqual
+  isEqual,
+  uniq,
+  memoize
 } = require('lodash')
 const Joi = require('joi')
 
@@ -96,29 +100,51 @@ const descToType = (desc, isInput) => {
 }
 
 const descsToSchema = (descs, done) => {
-  const query = {}
   return mapValues(descs, (desc, key) => ({
     type: descToType(desc),
     args: descToArgs(desc) || {},
     description: desc.description || '',
     resolve: (parent, opts, root) => {
       validateArgs(desc, opts)
-      if (!parent) {
-        console.log('parent')
-        query[key] = { args: opts, fields: {} }
-        return new Promise((resolve) => setTimeout(() => {
-          console.log('resolve')
-          return resolve(done(query))
-        }))
-      } else {
-        if (key === 'footerArticles') console.log('not', key, parent[key])
-        return parent[key]
-      }
+      if (!parent) return done()[key]
+      else return parent[key]
     }
   }))
 }
-// query.article.args => { id: 1 }
-// query.article.fields.footerArticles.args => { limit: 100 }
+
+const mapSelection = (selections) => {
+  const kinds = uniq(map(selections, 'kind')).join('')
+  if (kinds === 'InlineFragment') {
+    return selections.map((s) => mapSelection(s.selectionSet.selections))
+  }
+  return fromPairs(selections.map((selection) => {
+    const key = selection.name.value
+    const args = fromPairs(map(selection.arguments, (sel) =>
+      [sel.name.value, sel.value.value]
+    ))
+    const fields = selection.selectionSet
+      ? mapSelection(selection.selectionSet.selections)
+      : {}
+    return [key, { args, fields }]
+  }))
+}
+
+const parseQuery = (query) => {
+  const definitions = parse(query).definitions
+  return definitions.map((d) => mapSelection(d.selectionSet.selections))[0]
+}
+
+const joiql = (jois, query, done) => {
+  const descs = mapValues(jois, (j) => j.describe())
+  const resolve = memoize(() => done(parseQuery(query)))
+  const schema = new GraphQLSchema({
+    query: new GraphQLObjectType({
+      name: 'RootQueryType',
+      fields: descsToSchema(descs, resolve)
+    })
+  })
+  return graphql(schema, query)
+}
 
 // -----------------------------------------------------------------------------
 // Not included in the library
@@ -126,6 +152,7 @@ const descsToSchema = (descs, done) => {
 
 const { object, string, number, array } = require('joi')
 
+// Schema
 let Article = {
   id: number(),
   title: string(),
@@ -153,7 +180,8 @@ Article = object(Article).meta({
   args: { id: number().max(10) }
 })
 
-const article = {
+// Stub
+const articleStub = {
   id: 1,
   title: 'Foo',
   author: {
@@ -165,21 +193,17 @@ const article = {
     { type: 'image', src: 'foo.jpg' }
   ]
 }
-article.footerArticles = [article]
 
-const schema = new GraphQLSchema({
-  query: new GraphQLObjectType({
-    name: 'RootQueryType',
-    fields: descsToSchema({
-      article: Article.describe()
-    }, (query) => {
-      console.log('QUERY', query)
-      return article
-    })
-  })
-})
-
-const query = `{
+// Run it
+joiql({
+  foo: object({
+    bar: string()
+  }),
+  article: Article
+}, `{
+  foo {
+    bar
+  }
   article(id: 1) {
     id
     title
@@ -201,6 +225,13 @@ const query = `{
       id
     }
   }
-}`
-
-graphql(schema, query).then((r) => console.log('RES', r))
+}`, (query) => {
+  const res = { foo: { bar: 'baz' } }
+  if (query.article) {
+    res.article = articleStub
+    if (query.article.fields.footerArticles) {
+      res.article.footerArticles = [articleStub]
+    }
+  }
+  return res
+}).then((r) => console.log('RES', r))
