@@ -148,11 +148,14 @@ const mapSelection = (selections) => {
 }
 
 module.exports = (jois, done) => {
-  const descs = mapValues(jois, (j) => j.describe())
   return new GraphQLSchema({
     query: new GraphQLObjectType({
       name: 'RootQueryType',
-      fields: descsToSchema(descs, done)
+      fields: descsToSchema(mapValues(jois.query, (j) => j.describe()), done)
+    }),
+    mutation: new GraphQLObjectType({
+      name: 'RootMutationType',
+      fields: descsToSchema(mapValues(jois.mutation, (j) => j.describe()), done)
     })
   })
 }
