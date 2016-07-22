@@ -2,43 +2,59 @@ const joiql = require('./')
 const { object, string, number } = require('joi')
 const app = require('express')()
 const graphqlHTTP = require('express-graphql')
-const { graphql } = require('graphql')
+const { uniqueId, pick } = require('lodash')
+
+// Fake database
+const _db = {}
+
+const db = {
+  find: (id) => _db[id],
+  save: (doc) => {
+    return new Promise((resolve) => {
+      _db[doc.id || uniqueId()] = doc
+      resolve(doc)
+    })
+  }
+}
+
+// Schemas
+const Author = {
+  id: number(),
+  name: string().required(),
+  email: string().email()
+}
 
 const Article = {
   id: number(),
-  title: string().required().max(150),
-  author: object({
-    id: string(),
-    name: string(),
-    bio: string()
-  }),
-  body: string()
+  title: string().required().min(10).max(150),
+  authorId: number()
 }
-const ArticleQuery = object(Article).meta({
-  args: { id: number().required() }
-})
 
-const schema = joiql({
+// Setup
+const api = joiql({
   query: {
-    article: ArticleQuery
+    article: object(Article).meta({ args: pick(Article, 'id') })
+  },
+  mutation: {
+    article: object(Article).meta({ args: Article }),
+    author: object(Author).meta({ args: Author })
   }
-}, (query) => {
-  const res = {}
-  if (query.article) res.article = { title: '10 cat videos' }
-  return res
 })
 
-graphql(schema, `
-  query {
-    article(id: 1) {
-      id
-    }
-  }
-`).then((r) => console.log(r))
+api.on('mutation.article', ({ args }, res) => {
+  return db.save(args).then((article) => {
+    res.article = article
+  })
+})
 
-// app.use('/graphql', graphqlHTTP({
-//   schema: schema,
-//   graphiql: true
-// }))
+api.on('mutation.article.args.authorId', (id, res) => {
+  console.log('go update author', id)
+})
 
-// app.listen(3000, () => console.log('listening on 3000'))
+// Mount
+app.use('/graphql', graphqlHTTP({
+  schema: api.schema,
+  graphiql: true
+}))
+
+app.listen(3000, () => console.log('listening on 3000'))

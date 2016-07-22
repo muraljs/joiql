@@ -21,9 +21,9 @@ const {
   isEqual,
   uniq,
   debounce,
-  assign
+  assign,
+  forEach
 } = require('lodash')
-const { parse } = require('graphql')
 const Joi = require('joi')
 
 const cachedTypes = {}
@@ -114,7 +114,7 @@ const descToType = (desc, isInput) => {
 const descsToSchema = (descs, done = () => {}) => {
   const query = {}
   let res
-  const fin = debounce(() => { res = done(query) })
+  const aggregate = debounce(() => { res = done(query) })
   return mapValues(descs, (desc, key) => ({
     type: descToType(desc),
     args: descToArgs(desc) || {},
@@ -122,9 +122,13 @@ const descsToSchema = (descs, done = () => {}) => {
     resolve: (source, args, root, { fieldASTs }) => {
       assign(query, mapSelection(fieldASTs))
       validateArgs(desc, args)
-      fin()
+      aggregate()
       if (!source) {
-        return new Promise((resolve) => setTimeout(() => resolve(res[key])))
+        return new Promise((resolve) => setTimeout(() => {
+          res.then
+            ? res.then((res) => resolve(res[key]))
+            : resolve(res[key])
+        }))
       } else return source[key]
     }
   }))
@@ -147,15 +151,44 @@ const mapSelection = (selections) => {
   }))
 }
 
-module.exports = (jois, done) => {
-  return new GraphQLSchema({
-    query: new GraphQLObjectType({
+const schemaResolve = (jois, done) => {
+  const attrs = {}
+  if (jois.query) {
+    attrs.query = new GraphQLObjectType({
       name: 'RootQueryType',
-      fields: descsToSchema(mapValues(jois.query, (j) => j.describe()), done)
-    }),
-    mutation: new GraphQLObjectType({
-      name: 'RootMutationType',
-      fields: descsToSchema(mapValues(jois.mutation, (j) => j.describe()), done)
+      fields: descsToSchema(mapValues(jois.query, (j) =>
+        j.describe()), (res) => done({ query: res }))
     })
+  }
+  if (jois.mutation) {
+    attrs.mutation = new GraphQLObjectType({
+      name: 'RootMutationType',
+      fields: descsToSchema(mapValues(jois.mutation, (j) =>
+        j.describe()), (res) => done({ mutation: res }))
+    })
+  }
+  return new GraphQLSchema(attrs)
+}
+
+module.exports = (jois) => {
+  const resolvers = []
+  const res = {}
+  const schema = schemaResolve(jois, (gqlQuery) => {
+    const promises = resolvers.map(({ prop, resolve }) => {
+      const data = prop.split('.').reduce((a, b) => a[b], gqlQuery)
+      if (data) return resolve(data, res)
+      else return Promise.resolve()
+    })
+    return promises
+      .reduce((prev, cur) => prev.then(cur))
+      .then(() => res)
   })
+  const api = {
+    schema: schema,
+    on: (prop, resolve) => {
+      resolvers.push({ prop, resolve })
+      return api
+    }
+  }
+  return api
 }
