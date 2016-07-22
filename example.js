@@ -20,28 +20,28 @@ const Person = object({
   args: { id: number().required() }
 })
 
-const schema = joiql({
-  person: Person,
-  film: Film
-}, (query) => {
-  const res = {}
-  if (query.film) res.film = { title: 'bar' }
-  if (query.person) {
-    // db.people.find({ id: query.person.args.id })
-    res.person = { name: 'Spike Jonze' }
-    // db.films.find({ id: { $in: res.person.film_ids } })
-    if (query.person.fields.films) {
-      res.person.films = [
-        { title: 'Her', producers: ['Annapurna'] },
-        { title: 'Adaptation', producers: ['Kaufman'] }
-      ]
-    }
+const api = joiql({
+  query: {
+    person: Person,
+    film: Film
   }
-  return res
+})
+
+api.on('query.film', (_, res) => {
+  res.film = { title: 'bar' }
+})
+api.on('query.person', (_, res) => {
+  res.person = { name: 'Spike Jonze' }
+})
+api.on('query.person.fields.films', (_, res) => {
+  res.person.films = [
+    { title: 'Her', producers: ['Annapurna'] },
+    { title: 'Adaptation', producers: ['Kaufman'] }
+  ]
 })
 
 app.use('/graphql', graphqlHTTP({
-  schema: schema,
+  schema: api.schema,
   graphiql: true
 }))
 

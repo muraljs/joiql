@@ -22,7 +22,7 @@ const {
   uniq,
   debounce,
   assign,
-  forEach
+  compact
 } = require('lodash')
 const Joi = require('joi')
 
@@ -175,11 +175,11 @@ module.exports = (jois) => {
   const res = {}
   const schema = schemaResolve(jois, (gqlQuery) => {
     const promises = resolvers.map(({ prop, resolve }) => {
-      const data = prop.split('.').reduce((a, b) => a[b], gqlQuery)
+      const data = prop.split('.').reduce((a, b) => a && a[b], gqlQuery)
       if (data) return resolve(data, res)
       else return Promise.resolve()
     })
-    return promises
+    return compact(promises)
       .reduce((prev, cur) => prev.then(cur))
       .then(() => res)
   })
