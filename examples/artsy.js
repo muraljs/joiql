@@ -48,6 +48,9 @@ api.on('query.artist', ({ req, res }) => {
     .set('X-Xapp-Token', artsyXapp.token)
     .then(({ body }) => { res.artist = body })
 })
+api.on('query', ({ req, res }) => {
+  console.log('Returning...', res)
+})
 
 // Mount GraphQL into Express
 const app = require('express')()
