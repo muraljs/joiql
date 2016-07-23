@@ -29,6 +29,11 @@ const api = joiql({
 })
 
 // JoiQL Middleware
+const cache = {}
+api.on('query', ({ req, res, state, end }) => {
+  state.key = JSON.stringify(req)
+  if (cache[state.key]) end(cache[state.key])
+})
 api.on('query.artwork', ({ req, res }) => {
   return request
     .get(`${ARTSY_URL}/api/v1/artwork/${req.args.id}`)
@@ -48,8 +53,9 @@ api.on('query.artist', ({ req, res }) => {
     .set('X-Xapp-Token', artsyXapp.token)
     .then(({ body }) => { res.artist = body })
 })
-api.on('query', ({ req, res }) => {
-  console.log('Returning...', res)
+api.on('query', ({ req, res, state }) => {
+  cache[state.key] = res
+  console.log('Returning...', Object.keys(res))
 })
 
 // Mount GraphQL into Express

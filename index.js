@@ -171,11 +171,23 @@ const schemaResolve = (jois, done) => {
 
 module.exports = (jois) => {
   const resolvers = []
-  const res = {}
+  let res = {}
+  let ended = false
   const schema = schemaResolve(jois, (gqlQuery) => {
+    const state = {}
     const promises = resolvers.map(({ prop, resolve: done }) => {
+      if (ended) return () => Promise.resolve()
       const req = prop.split('.').reduce((a, b) => a && a[b], gqlQuery)
-      if (req) return () => done({ req, res })
+      const ctx = {
+        req: req,
+        res: res,
+        state: state,
+        end: (endRes) => {
+          res = endRes
+          ended = true
+        }
+      }
+      if (req) return () => new Promise((resolve) => resolve(done(ctx)))
       else return () => Promise.resolve()
     })
     return compact(promises)
