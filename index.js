@@ -124,10 +124,9 @@ const descsToSchema = (descs, done = () => {}) => {
       validateArgs(desc, args)
       aggregate()
       if (!source) {
-        return new Promise((resolve) => setTimeout(() => {
-          res.then
-            ? res.then((res) => resolve(res[key]))
-            : resolve(res[key])
+        return new Promise((resolve, reject) => setTimeout(() => {
+          if (res.then) res.then((res) => resolve(res[key])).catch(reject)
+          else try { resolve(res[key]) } catch (e) { reject(e) }
         }))
       } else return source[key]
     }
@@ -174,13 +173,15 @@ module.exports = (jois) => {
   const resolvers = []
   const res = {}
   const schema = schemaResolve(jois, (gqlQuery) => {
-    const promises = resolvers.map(({ prop, resolve }) => {
-      const data = prop.split('.').reduce((a, b) => a && a[b], gqlQuery)
-      if (data) return resolve(data, res)
-      else return Promise.resolve()
+    const promises = resolvers.map(({ prop, resolve: done }) => {
+      const req = prop.split('.').reduce((a, b) => a && a[b], gqlQuery)
+      if (req) return () => done({ req, res })
+      else return () => Promise.resolve()
     })
     return compact(promises)
-      .reduce((prev, cur) => prev.then(cur))
+      .reduce((prev, cur) =>
+        typeof prev === 'function' ? prev().then(cur) : prev.then(cur)
+      )
       .then(() => res)
   })
   const api = {

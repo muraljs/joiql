@@ -7,7 +7,8 @@ const { ARTSY_URL } = process.env
 // Schemas
 const Artist = object({
   id: string(),
-  name: string()
+  name: string(),
+  location: string()
 })
 const Artwork = object({
   id: string(),
@@ -28,30 +29,24 @@ const api = joiql({
 })
 
 // JoiQL Middleware
-api.on('query.artwork', ({ args }, res) => {
+api.on('query.artwork', ({ req, res }) => {
   return request
-    .get(`${ARTSY_URL}/api/v1/artwork/${args.id}`)
+    .get(`${ARTSY_URL}/api/v1/artwork/${req.args.id}`)
     .set('X-Xapp-Token', artsyXapp.token)
-    .then(({ body }) => {
-      res.artwork = body
-    })
+    .then(({ body }) => { res.artwork = body })
 })
-api.on('query.artwork.fields.artist.args', ({ shallow }, res) => {
-  if (shallow) return
+api.on('query.artwork.fields.artist', ({ req, res }) => {
+  if (req.args.shallow !== false) return
   return request
     .get(`${ARTSY_URL}/api/v1/artist/${res.artwork.artist.id}`)
     .set('X-Xapp-Token', artsyXapp.token)
-    .then(({ body }) => {
-      res.artwork.artist = body
-    })
+    .then(({ body }) => { res.artwork.artist = body })
 })
-api.on('query.artist', ({ args }, res) => {
+api.on('query.artist', ({ req, res }) => {
   return request
-    .get(`${ARTSY_URL}/api/v1/artist/${args.id}`)
+    .get(`${ARTSY_URL}/api/v1/artist/${req.args.id}`)
     .set('X-Xapp-Token', artsyXapp.token)
-    .then(({ body }) => {
-      res.artist = body
-    })
+    .then(({ body }) => { res.artist = body })
 })
 
 // Mount GraphQL into Express
