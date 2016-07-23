@@ -1,4 +1,4 @@
-const joiql = require('./')
+const joiql = require('../')
 const { object, string, number, array, date } = require('joi')
 const app = require('express')()
 const graphqlHTTP = require('express-graphql')
