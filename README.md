@@ -57,5 +57,4 @@ app.listen(3000, () => console.log('listening on 3000'))
 
 ## TODO
 
-* Allow `(jois, query, ...resolves)` that `_.flow`s the resolves for middleware
 * Figure out how to do circular dependencies (ideally with Joi `lazy`)
