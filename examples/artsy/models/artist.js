@@ -6,6 +6,7 @@ module.exports.Attrs = {
   initials: string(),
   gender: string(),
   is_public: boolean(),
+  blurb: string(),
   biography: object(Article.Attrs).meta({
     name: 'Article',
     description: 'The artist biography article'

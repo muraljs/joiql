@@ -20,6 +20,7 @@ const api = joiql({
 // JoiQL Middleware
 api.on('query', cache.get)
 api.on('query', rest.fetch)
+api.on('query.artwork.fields.artist', Artwork.resolveArtist)
 api.on('query', cache.set)
 
 // Start express server

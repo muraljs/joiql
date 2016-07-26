@@ -1,7 +1,8 @@
 const { map } = require('lodash')
-const { ARTSY_URL, POSITRON_URL } = process.env
 const request = require('superagent')
 const artsyXapp = require('artsy-xapp')
+
+const { ARTSY_URL, POSITRON_URL } = process.env
 
 module.exports.fetch = ({ req, res }) => {
   const promises = map(req, ({ args }, resource) => {
