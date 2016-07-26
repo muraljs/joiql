@@ -9,7 +9,6 @@ const Film = object({
   producers: array().items(string()),
   release_date: date()
 })
-
 const Person = object({
   name: string(),
   films: array().items(Film)
@@ -28,7 +27,7 @@ const api = joiql({
 // Middleware to resolve the request
 // (returning promises to mimic async functions)
 api.on('query.film', (ctx) => {
-  ctx.res.film = { title: 'bar' }
+  ctx.res.film = { title: 'Paul Blart Mall Cop' }
   return Promise.resolve()
 })
 api.on('query.person', (ctx) => {

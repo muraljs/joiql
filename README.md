@@ -4,8 +4,10 @@ WIP to generate a GraphQL schema from a Joi schema.
 
 ## Example
 
+Run this example with `npm run examples/films.js`.
+
 ````javascript
-const joiql = require('joiql')
+const joiql = require('../')
 const { object, string, number, array, date } = require('joi')
 const app = require('express')()
 const graphqlHTTP = require('express-graphql')
@@ -16,7 +18,6 @@ const Film = object({
   producers: array().items(string()),
   release_date: date()
 })
-
 const Person = object({
   name: string(),
   films: array().items(Film)
