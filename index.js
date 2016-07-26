@@ -23,7 +23,8 @@ const {
   debounce,
   assign,
   compact,
-  flatten
+  flatten,
+  isFunction
 } = require('lodash')
 const Joi = require('joi')
 
@@ -189,29 +190,30 @@ module.exports = (jois) => {
   let ended = false
   const schema = schemaResolve(jois, (gqlQuery) => {
     const state = {}
-    const promises = resolvers.map(({ prop, resolve: next }) => {
-      if (ended) return () => Promise.resolve()
+    const promiseThunks = resolvers.map(({ prop, resolve: next }) => {
       const req = prop.split('.').reduce((a, b) => a && a[b], gqlQuery)
       const ctx = {
         req,
         res,
         state,
         end: (endRes) => {
-          res = endRes
+          if (endRes) res = endRes
           ended = true
         }
       }
-      if (req) return () => next(ctx)
+      if (req && !ended) return () => next(ctx)
       else return () => Promise.resolve()
     })
-    return compact(promises)
-      .reduce((prev, cur) => prev && prev().then(cur))
-      .then(() => res)
+    const final = compact(promiseThunks)
+      .reduce((prev, cur) => {
+        return (isFunction(prev) ? prev() : prev).then(cur)
+      })
+    return (isFunction(final) ? final() : final).then(() => res)
   })
   const api = {
     schema: schema,
-    on: (prop, resolve) => {
-      resolvers.push({ prop, resolve })
+    on: (props, resolve) => {
+      props.split(' ').forEach((prop) => resolvers.push({ prop, resolve }))
       return api
     }
   }

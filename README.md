@@ -58,4 +58,4 @@ app.listen(3000, () => console.log('listening on 3000'))
 ## TODO
 
 * Figure out how to do circular dependencies (ideally with Joi `lazy`)
-* Need to use `next` in middleware b/c we need to shortcircut it
+* Better errors (right now one error batches up the same response for every query)
