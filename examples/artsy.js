@@ -2,6 +2,7 @@ const joiql = require('../')
 const { object, string, boolean } = require('joi')
 const request = require('superagent')
 const artsyXapp = require('artsy-xapp')
+const growl = require('growl')
 const { ARTSY_URL } = process.env
 
 // Schemas
@@ -13,6 +14,8 @@ const Artist = object({
 const Artwork = object({
   id: string(),
   title: string(),
+  medium: string(),
+  price: string(),
   artist: Artist.meta({
     args: { shallow: boolean() }
   })
@@ -20,7 +23,7 @@ const Artwork = object({
 const api = joiql({
   query: {
     artwork: Artwork.meta({
-      args: { id: string().required() }
+      args: { id: string().required().min(10) }
     }),
     artist: Artist.meta({
       args: { id: string().required() }
@@ -52,6 +55,9 @@ api.on('query.artist', ({ req, res }) => {
     .get(`${ARTSY_URL}/api/v1/artist/${req.args.id}`)
     .set('X-Xapp-Token', artsyXapp.token)
     .then(({ body }) => { res.artist = body })
+})
+api.on('query.artwork.fields.price', () => {
+  growl('Someone asked about price!')
 })
 api.on('query', ({ req, res, state }) => {
   cache[state.key] = res

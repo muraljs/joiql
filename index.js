@@ -22,7 +22,8 @@ const {
   uniq,
   debounce,
   assign,
-  compact
+  compact,
+  flatten
 } = require('lodash')
 const Joi = require('joi')
 
@@ -92,16 +93,26 @@ const descToType = (desc, isInput) => {
           type = cachedTypes[typeName]
         } else {
           const types = desc.items.map((item) => descToType(item, isInput))
-          type = new GraphQLUnionType({
-            name: typeName,
-            description: desc.description,
-            types: types,
-            // TODO: Should use JOI.validate(), just looks at matching keys
-            // We might need to pass schema here instead
-            resolveType: (val) =>
-              find(map(desc.items, (item, i) =>
-                isEqual(keys(val), keys(item.children)) && types[i]))
-          })
+          if (isInput) {
+            const children = desc.items.map((item) => item.children)
+            const fields = descsToSchema(assign(...flatten(children)))
+            type = new GraphQLInputObjectType({
+              name: typeName,
+              description: desc.description,
+              fields: fields
+            })
+          } else {
+            type = new GraphQLUnionType({
+              name: typeName,
+              description: desc.description,
+              types: types,
+              // TODO: Should use JOI.validate(), just looks at matching keys
+              // We might need to pass schema here instead
+              resolveType: (val) =>
+                find(map(desc.items, (item, i) =>
+                  isEqual(keys(val), keys(item.children)) && types[i]))
+            })
+          }
         }
       }
       if (!cachedTypes[typeName]) cachedTypes[typeName] = type
@@ -109,28 +120,6 @@ const descToType = (desc, isInput) => {
     }
   }[desc.type]()
   return required ? new GraphQLNonNull(type) : type
-}
-
-const descsToSchema = (descs, done = () => {}) => {
-  const query = {}
-  let res
-  const aggregate = debounce(() => { res = done(query) })
-  return mapValues(descs, (desc, key) => ({
-    type: descToType(desc),
-    args: descToArgs(desc) || {},
-    description: desc.description || '',
-    resolve: (source, args, root, { fieldASTs }) => {
-      assign(query, mapSelection(fieldASTs))
-      validateArgs(desc, args)
-      aggregate()
-      if (!source) {
-        return new Promise((resolve, reject) => setTimeout(() => {
-          if (res.then) res.then((res) => resolve(res[key])).catch(reject)
-          else try { resolve(res[key]) } catch (e) { reject(e) }
-        }))
-      } else return source[key]
-    }
-  }))
 }
 
 const mapSelection = (selections) => {
@@ -150,20 +139,45 @@ const mapSelection = (selections) => {
   }))
 }
 
-const schemaResolve = (jois, done) => {
+const descsToSchema = (descs, resolveMiddlewares = () => {}) => {
+  const query = {}
+  let finish
+  const aggregate = debounce(() => { finish = resolveMiddlewares(query) })
+  return mapValues(descs, (desc, key) => ({
+    type: descToType(desc),
+    args: descToArgs(desc),
+    description: desc.description || '',
+    resolve: (source, args, root, { fieldASTs }) => {
+      assign(query, mapSelection(fieldASTs))
+      validateArgs(desc, args)
+      aggregate()
+      if (!source) {
+        return new Promise((resolve, reject) => setTimeout(() => {
+          finish.then((res) => resolve(res[key])).catch(reject)
+        }))
+      } else return source[key]
+    }
+  }))
+}
+
+const schemaResolve = (jois, buildMiddlewares) => {
   const attrs = {}
   if (jois.query) {
     attrs.query = new GraphQLObjectType({
       name: 'RootQueryType',
-      fields: descsToSchema(mapValues(jois.query, (j) =>
-        j.describe()), (res) => done({ query: res }))
+      fields: descsToSchema(
+        mapValues(jois.query, (j) => j.describe()),
+        (gqlQuery) => buildMiddlewares({ query: gqlQuery })
+      )
     })
   }
   if (jois.mutation) {
     attrs.mutation = new GraphQLObjectType({
       name: 'RootMutationType',
-      fields: descsToSchema(mapValues(jois.mutation, (j) =>
-        j.describe()), (res) => done({ mutation: res }))
+      fields: descsToSchema(
+        mapValues(jois.mutation, (j) => j.describe()),
+        (gqlQuery) => buildMiddlewares({ mutation: gqlQuery })
+      )
     })
   }
   return new GraphQLSchema(attrs)
@@ -175,25 +189,23 @@ module.exports = (jois) => {
   let ended = false
   const schema = schemaResolve(jois, (gqlQuery) => {
     const state = {}
-    const promises = resolvers.map(({ prop, resolve: done }) => {
+    const promises = resolvers.map(({ prop, resolve: next }) => {
       if (ended) return () => Promise.resolve()
       const req = prop.split('.').reduce((a, b) => a && a[b], gqlQuery)
       const ctx = {
-        req: req,
-        res: res,
-        state: state,
+        req,
+        res,
+        state,
         end: (endRes) => {
           res = endRes
           ended = true
         }
       }
-      if (req) return () => new Promise((resolve) => resolve(done(ctx)))
+      if (req) return () => next(ctx)
       else return () => Promise.resolve()
     })
     return compact(promises)
-      .reduce((prev, cur) =>
-        typeof prev === 'function' ? prev().then(cur) : prev.then(cur)
-      )
+      .reduce((prev, cur) => prev && prev().then(cur))
       .then(() => res)
   })
   const api = {
