@@ -13,7 +13,6 @@ const {
 const {
   uniqueId,
   map,
-  fromPairs,
   find,
   mapValues,
   capitalize,
@@ -24,20 +23,11 @@ const {
   assign,
   compact,
   flatten,
-  isFunction,
-  omit
+  isFunction
 } = require('lodash')
 const Joi = require('joi')
 
 const cachedTypes = {}
-
-const validateArgs = (desc, args) => {
-  const argsSchema = map(desc.meta, 'args')[0]
-  if (!argsSchema) return {}
-  const { data, error } = Joi.validate(args, argsSchema)
-  if (error) throw error
-  return data
-}
 
 const descToArgs = (desc) => {
   const argsSchema = map(desc.meta, 'args')[0]
@@ -131,52 +121,59 @@ const descToType = (desc, isInput) => {
   return required ? new GraphQLNonNull(type) : type
 }
 
-const mapSelection = (selections) => {
+const selToVal = (selection) => {
+  const fns = {
+    StringValue: () => selection.value,
+    ListValue: () => map(selection.values, selToVal),
+    ObjectValue: () => assign(...map(selection.fields, (field) =>
+      ({ [field.name.value]: selToVal(field.value) })))
+  }
+  if (!fns[selection.kind]) {
+    console.log(selection)
+    throw new Error(`Unsupported kind ${selection.kind}`)
+  }
+  return fns[selection.kind]()
+}
+
+const mapArgs = (args) => {
+  return assign(...map(args, (arg) =>
+    ({ [arg.name.value]: selToVal(arg.value) }))
+  )
+}
+
+const validateArgs = (desc, args) => {
+  const argsSchema = map(desc.meta, 'args')[0]
+  if (!argsSchema) return {}
+  const { value, error } = Joi.validate(args, argsSchema)
+  if (error) throw error
+  return value
+}
+
+const mapSelections = (desc, selections) => {
   const kinds = uniq(map(selections, 'kind')).join('')
   if (kinds === 'InlineFragment') {
-    return selections.map((s) => mapSelection(s.selectionSet.selections))
+    return selections.map((s) => mapSelections(desc, s.selectionSet.selections))
   }
-  return fromPairs(selections.map((selection) => {
+  return assign(...map(selections, (selection) => {
     const key = selection.name.value
-    // if (sel.value.values) console.log()
-    //
-    // TODO: We shouldn't use pairs here, we need to do some recurisve craziness
-    // that will allow us to work better with nested objects keeping key, val
-    // around.
-    //
-    const toPair = (selection) => {
-      if (selection.value.values) {
-        const subSelections = flatten(map(selection.value.values, 'fields'))
-        console.log('too arr', subSelections)
-        return map(subSelections, toPair)
-      } else {
-        const val = selection.value.fields
-          ? map(selection.value.fields, toPair)
-          : selection.value.value
-        console.log('moo', selection.name.value, val)
-        return [selection.name.value, val]
-      }
-    }
-    const args = fromPairs(map(selection.arguments, toPair))
-    console.log('args...', args)
+    const args = validateArgs(desc, mapArgs(selection.arguments))
     const fields = selection.selectionSet
-      ? mapSelection(selection.selectionSet.selections)
+      ? mapSelections(desc, selection.selectionSet.selections)
       : {}
-    return [key, { args, fields }]
+    return { [key]: { args, fields } }
   }))
 }
 
 const descsToSchema = (descs, resolveMiddlewares = () => {}) => {
-  const query = {}
+  const req = {}
   let finish
-  const aggregate = debounce(() => { finish = resolveMiddlewares(query) })
+  const aggregate = debounce(() => { finish = resolveMiddlewares(req) })
   return mapValues(descs, (desc, key) => ({
     type: descToType(desc),
     args: descToArgs(desc),
     description: desc.description || '',
     resolve: (source, args, root, { fieldASTs }) => {
-      assign(query, mapSelection(fieldASTs))
-      validateArgs(desc, args)
+      assign(req, mapSelections(desc, fieldASTs))
       aggregate()
       if (!source) {
         return new Promise((resolve, reject) => setTimeout(() => {
