@@ -24,7 +24,8 @@ const {
   assign,
   compact,
   flatten,
-  isFunction
+  isFunction,
+  omit
 } = require('lodash')
 const Joi = require('joi')
 
@@ -65,17 +66,24 @@ const descToType = (desc, isInput) => {
       return isInteger ? GraphQLInt : GraphQLFloat
     },
     object: () => {
-      if (cachedTypes[typeName]) {
-        return cachedTypes[typeName]
-      } else {
-        const ObjectType = isInput ? GraphQLInputObjectType : GraphQLObjectType
-        const type = new ObjectType({
+      if (cachedTypes[typeName]) return cachedTypes[typeName]
+      let type
+      if (isInput) {
+        type = new GraphQLInputObjectType({
           name: typeName,
+          description: desc.description,
+          fields: mapValues(desc.children, (child) => (
+            { type: descToType(child, true) }))
+        })
+      } else {
+        type = new GraphQLObjectType({
+          name: typeName,
+          description: desc.description,
           fields: descsToSchema(desc.children)
         })
-        cachedTypes[typeName] = type
-        return type
       }
+      cachedTypes[typeName] = type
+      return type
     },
     array: () => {
       let type
@@ -130,9 +138,27 @@ const mapSelection = (selections) => {
   }
   return fromPairs(selections.map((selection) => {
     const key = selection.name.value
-    const args = fromPairs(map(selection.arguments, (sel) =>
-      [sel.name.value, sel.value.value]
-    ))
+    // if (sel.value.values) console.log()
+    //
+    // TODO: We shouldn't use pairs here, we need to do some recurisve craziness
+    // that will allow us to work better with nested objects keeping key, val
+    // around.
+    //
+    const toPair = (selection) => {
+      if (selection.value.values) {
+        const subSelections = flatten(map(selection.value.values, 'fields'))
+        console.log('too arr', subSelections)
+        return map(subSelections, toPair)
+      } else {
+        const val = selection.value.fields
+          ? map(selection.value.fields, toPair)
+          : selection.value.value
+        console.log('moo', selection.name.value, val)
+        return [selection.name.value, val]
+      }
+    }
+    const args = fromPairs(map(selection.arguments, toPair))
+    console.log('args...', args)
     const fields = selection.selectionSet
       ? mapSelection(selection.selectionSet.selections)
       : {}
