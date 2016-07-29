@@ -1,10 +1,10 @@
 {
   "name": "joiql",
   "version": "0.0.3",
-  "description": "A library combining Joi and GraphQL for ease of use and input validation.",
+  "description": "Make GraphQL schema creation and data validation easy with Joi.",
   "main": "index.js",
   "scripts": {
-    "test": "standard",
+    "test": "concurrently 'standard' 'mocha -r should'",
     "b": "browserify script.js -o bundle.js -t [ babelify --presets [ es2015 ] ]",
     "example": "node -r dotenv/config -r ./lib/bluebird.js"
   },
@@ -20,6 +20,7 @@
   "devDependencies": {
     "artsy-xapp": "^1.0.4",
     "bluebird": "^3.4.1",
+    "concurrently": "^2.2.0",
     "dotenv": "^2.0.0",
     "express": "^4.14.0",
     "express-graphql": "^0.5.3",

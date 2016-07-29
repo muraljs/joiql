@@ -1,10 +1,10 @@
 # joiql
 
-WIP to generate a GraphQL schema from a Joi schema.
+Make [GraphQL](http://graphql.org/) schema creation and data validation easy with [Joi](https://github.com/hapijs/joi).
 
 ## Example
 
-Run this example with `npm run examples/films.js`.
+See this example in action by cloning the project and running `npm run examples/films.js`.
 
 ````javascript
 const joiql = require('../')

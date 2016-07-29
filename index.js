@@ -4,7 +4,6 @@
 // stack of middleware all at once, instead of in the nested way that GraphQL.js
 // encourages by default.
 //
-
 const { GraphQLSchema, GraphQLObjectType } = require('graphql')
 const { mapValues } = require('lodash')
 const { addRoute, buildMiddlewares } = require('./lib/middleware')
