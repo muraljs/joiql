@@ -16,12 +16,12 @@ const ArticleAttrs = {
   ).default([])
 }
 
-module.exports.Query = object(ArticleAttrs).meta({
+exports.Query = object(ArticleAttrs).meta({
   name: 'ArticleQuery',
   args: { id: number().required() }
 })
 
-module.exports.Mutation = object(ArticleAttrs).meta({
+exports.Mutation = object(ArticleAttrs).meta({
   name: 'ArticleMutation',
   args: ArticleAttrs
 })

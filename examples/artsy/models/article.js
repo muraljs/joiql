@@ -1,6 +1,6 @@
 const { string, date } = require('joi')
 
-module.exports.Attrs = {
+exports.Attrs = {
   title: string(),
   published_at: date(),
   slug: string()

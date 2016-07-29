@@ -5,7 +5,7 @@ const artsyXapp = require('artsy-xapp')
 
 const { ARTSY_URL } = process.env
 
-module.exports.Attrs = {
+exports.Attrs = {
   title: string(),
   category: string(),
   medium: string(),
@@ -19,7 +19,7 @@ module.exports.Attrs = {
   })
 }
 
-module.exports.resolveArtist = ({ req, res }) => {
+exports.resolveArtist = ({ req, res }) => {
   if (req.args.shallow) return Promise.resolve()
   return request
     .get(`${ARTSY_URL}/api/v1/artist/${res.artwork.artist.id}`)

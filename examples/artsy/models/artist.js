@@ -1,7 +1,7 @@
 const { string, boolean, object } = require('joi')
 const Article = require('./article')
 
-module.exports.Attrs = {
+exports.Attrs = {
   name: string(),
   initials: string(),
   gender: string(),

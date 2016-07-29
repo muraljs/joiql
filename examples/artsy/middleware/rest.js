@@ -4,7 +4,7 @@ const artsyXapp = require('artsy-xapp')
 
 const { ARTSY_URL, POSITRON_URL } = process.env
 
-module.exports.fetch = ({ req, res }) => {
+exports.fetch = ({ req, res }) => {
   const promises = map(req, ({ args }, resource) => {
     return request
       .get(

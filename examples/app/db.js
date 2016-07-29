@@ -16,24 +16,22 @@ const db = {
     })
 }
 
-module.exports.fetch = ({ req, res }) => {
+exports.fetch = ({ req, res }) => {
   const promises = map(req, ({ args }, col) => {
-    return db.findOne(col, args.id).then((doc) => {
-      return res[col] = doc
-    })
+    return db.findOne(col, args.id).then((doc) => { res[col] = doc })
   })
   return Promise.all(promises)
 }
 
-module.exports.save = ({ req, res }) => {
+exports.save = ({ req, res }) => {
   const promises = map(req, ({ args }, col) => {
     return db.save(col, args).then((doc) => { res[col] = doc })
   })
   return Promise.all(promises)
 }
 
-module.exports.log = ({ res }) => {
+exports.log = ({ res }) => {
   return Promise.resolve()
 }
 
-module.exports.db = db
+exports.db = db
