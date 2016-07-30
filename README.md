@@ -7,10 +7,8 @@ Make [GraphQL](http://graphql.org/) schema creation and data validation easy wit
 ## Example
 
 ````javascript
-const joiql = require('../')
 const { object, string, number, array, date } = require('joi')
-const app = require('express')()
-const graphqlHTTP = require('express-graphql')
+const joiql = require('../')
 
 // Joi Schemas
 const Film = object({
@@ -51,12 +49,8 @@ api.on('query.person.fields.films', (ctx) => {
   return Promise.resolve()
 })
 
-// Mount schema to express
-app.use('/graphql', graphqlHTTP({
-  schema: api.schema,
-  graphiql: true
-}))
-app.listen(3000, () => console.log('listening on 3000'))
+// Use the GraphQL.js schema object to mount in say Express
+console.log(api.schema)
 ````
 
 ## Breaking it down
