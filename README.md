@@ -6,6 +6,8 @@ Make [GraphQL](http://graphql.org/) schema creation and data validation easy wit
 
 ## Example
 
+Run this using `npm run example examples/films`...
+
 ````javascript
 const { object, string, number, array, date } = require('joi')
 const joiql = require('../')
