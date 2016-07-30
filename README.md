@@ -6,7 +6,7 @@ Make [GraphQL](http://graphql.org/) schema creation and data validation easy wit
 
 ## Getting Started
 
-1. Define some schemas using [Joi](https://github.com/hapijs/joi).
+Define some schemas using [Joi](https://github.com/hapijs/joi).
 
 ````javascript
 const { object, string, number, array, date } = require('joi')
@@ -31,7 +31,7 @@ const Person = object({
 })
 ````
 
-2. Create your JoiQL `api` object from the Joi schemas and expose a GraphQL.js schema object for mounting into a server like Express.
+Create your JoiQL `api` object from the Joi schemas and expose a GraphQL.js schema object for mounting into a server like Express.
 
 ````javascript
 const { graphql } = require('graphql')
@@ -47,7 +47,7 @@ const api = joiql({
 graphql(api.schema, `{ person(id: 1) { name } }`).then(() => {})
 ````
 
-3. Unlike GraphQL.js, JoiQL resolves schemas all at once through middleware at the root level—using dot notation "routing" to scope granular resolves to properties. This has a number of exciting benefits for resuability, composability, pluggability, and other abstract design pattern stuff like that which is yet to be fully explored/explained. Peruse some stuff in /examples to see how we use middleware to elegantly add things like logging, caching, automagic query to REST/Database call conversion, etc.
+Unlike GraphQL.js, JoiQL resolves schemas all at once through middleware at the root level—using dot notation "routing" to scope granular resolves to properties. This has a number of exciting benefits for resuability, composability, pluggability, and other abstract design pattern stuff like that which is yet to be fully explored/explained. Peruse some stuff in /examples to see how we use middleware to elegantly add things like logging, caching, automagic query to REST/Database call conversion, etc.
 
 The below code shows how we use dot notation "routes" to scope our resolves to properties on a given GraphQL query. For instance `on('query.film')` will run the middleware callback if someone sends a `query { film { ... } }` GraphQL query, and skips that middleware if someone queries say `query { person { ... } }` (without `film`). The middleware functions must return a promise (in anticipation of async/await support) and will execute in the order they are `.on`ed (awaiting the previous promise). Finally notice how we mutate `ctx.res` in each middleware. This is how you resolve queries in JoiQL—the `ctx.res` object represents the final data blob being returned from the GraphQL query. Each middleware builds up the `ctx.res` object which gets sent as the GraphQL JSON response after all the middlewares resolve.
 
