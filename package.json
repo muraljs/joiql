@@ -4,7 +4,8 @@
   "description": "Make GraphQL schema creation and data validation easy with Joi.",
   "main": "index.js",
   "scripts": {
-    "test": "mocha -r should && standard",
+    "test": "npm run mocha && standard",
+    "mocha": "mocha -r should",
     "b": "browserify script.js -o bundle.js -t [ babelify --presets [ es2015 ] ]",
     "example": "node -r dotenv/config -r ./lib/bluebird.js"
   },
@@ -12,9 +13,6 @@
   "license": "MIT",
   "dependencies": {
     "lodash": "^4.13.1"
-  },
-  "standard": {
-    "ignore": ["test"]
   },
   "peerDependencies": {
     "graphql": "^0.6.1",

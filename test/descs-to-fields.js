@@ -1,15 +1,14 @@
+const { describe, it } = global // For linting
 const descsToFields = require('../lib/descs-to-fields')
 const { string, number, object, array, boolean, date } = require('joi')
-const { GraphQLList } = require('graphql')
 
 describe('descsToFields', () => {
-
-  it ('converts a joi string to GraphQL string', () => {
+  it('converts a joi string to GraphQL string', () => {
     const fields = descsToFields({ foo: string().describe() })
     fields.foo.type.name.should.equal('String')
   })
 
-  it ('converts various scalar types', () => {
+  it('converts various scalar types', () => {
     const fields = descsToFields({
       str: string().describe(),
       int: number().integer().describe(),
