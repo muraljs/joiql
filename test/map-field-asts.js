@@ -1,6 +1,6 @@
 const { describe, it } = global // For linting
 const mapFieldASTs = require('../lib/map-field-asts')
-const { string, number, object, array, boolean, date } = require('joi')
+const { string, number, object } = require('joi')
 const { parse } = require('graphql/language')
 
 const getQuery = (schema, query) => {
@@ -27,7 +27,7 @@ describe('mapFieldASTs', () => {
   })
 
   it('validates arguments', () => {
-    const query = getQuery(
+    (() => getQuery(
       object({
         person: object({ name: string() }).meta({
           args: {
@@ -41,7 +41,6 @@ describe('mapFieldASTs', () => {
           name
         }
       }`
-    )
-    console.log(query)
+    )).should.throw()
   })
 })
