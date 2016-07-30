@@ -50,7 +50,10 @@ api.on('query.person.fields.films', (ctx) => {
 })
 
 // Use the GraphQL.js schema object to mount in say Express
-console.log(api.schema)
+app.use('/graphql', graphqlHTTP({
+  schema: api.schema,
+  graphiql: true
+}))
 ````
 
 ## Breaking it down
