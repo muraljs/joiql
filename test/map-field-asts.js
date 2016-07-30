@@ -26,7 +26,7 @@ describe('mapFieldASTs', () => {
     query.hello.fields.world.fields.should.be.empty()
   })
 
-  it('validates arguments', () => {
+  xit('validates arguments', () => {
     (() => getQuery(
       object({
         person: object({ name: string() }).meta({
