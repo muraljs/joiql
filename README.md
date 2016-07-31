@@ -134,7 +134,7 @@ api.on('query.person.fields.films', (ctx) => {
 
 ### ctx.req
 
-An object representing the parsed GraphQL query scoped to the "route". For instance a query like...
+An object representing the parsed GraphQL, For instance a query like...
 
 ```
 mutation {
@@ -164,6 +164,28 @@ Would be parsed into an object that looks like
   }
 }
 ```
+
+When scoping to a route the `ctx.req` object is also scoped to that field.
+
+e.g. Given the example above, using...
+
+````javascript
+api.on('mutation.artwork', ...)
+````
+
+...would provide a `ctx.req` object that looks like...
+
+````
+{
+  args: {
+    title: "Skull",
+    date: "1976-02-01T05:00:00.000Z"
+  },
+  fields: {
+    title: { args: {}, fields {} }
+  }
+}
+````
 
 ### ctx.res
 
