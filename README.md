@@ -60,7 +60,7 @@ app.use('/graphql', graphqlHTTP({
 
 ## Breaking it down
 
-Define some schemas using [Joi](https://github.com/hapijs/joi).
+First, define some schemas using [Joi](https://github.com/hapijs/joi).
 
 ````javascript
 const { object, string, number, array, date } = require('joi')
@@ -75,17 +75,20 @@ const Person = object({
   name: string(),
   films: array().items(Film)
 })
-// `meta.args` on Joi schemas define GraphQL arguments (adding automatic
-// input validation), and the `meta.name` property is used to declare the custom
-// GraphQLObjectType name. When `name` is undefined JoiQL will automatically
-// add an "Anonymous<UID>" type name).
-.meta({
+````
+
+JoiQL uses the [`meta` property](https://github.com/hapijs/joi/blob/v9.0.4/API.md#anymetameta) to extend GraphQL fields. Use `meta.args` to define GraphQL arguments (adding automatic
+input validation), and `meta.name` to declare the `GraphQLObjectType` type name (without it JoiQL will automatically
+add a "Anon<UID>" type name).
+
+````javascript
+Person.meta({
   name: 'Person',
   args: { id: number().required() }
 })
 ````
 
-Create your JoiQL `api` object from the Joi schemas and expose a GraphQL.js schema object for mounting into a server like Express.
+Then create a JoiQL `api` object from the Joi schemas and expose a GraphQL.js schema object for mounting into a server like Express.
 
 ````javascript
 const { graphql } = require('graphql')
@@ -98,15 +101,16 @@ const api = joiql({
   }
 })
 
-graphql(api.schema, `{ person(id: 1) { name } }`).then(() => {})
+graphql(api.schema, ...)
 ````
 
 Unlike GraphQL.js, JoiQL resolves schemas all at once through middleware at the root level—using dot notation "routing" to scope granular resolves to properties. This has a number of exciting benefits for resuability, composability, pluggability, and other abstract design pattern stuff like that which is yet to be fully explored/explained. Peruse some stuff in /examples to see how we use middleware to elegantly add things like logging, caching, automagic query to REST/Database call conversion, etc.
 
-The below code shows how we use dot notation "routes" to scope our resolves to properties on a given GraphQL query. For instance `on('query.film')` will run the middleware callback if someone sends a `query { film { ... } }` GraphQL query, and skips that middleware if someone queries say `query { person { ... } }` (without `film`). The middleware functions must return a promise (in anticipation of async/await support) and will execute in the order they are `.on`ed (awaiting the previous promise). Finally notice how we mutate `ctx.res` in each middleware. This is how you resolve queries in JoiQL—the `ctx.res` object represents the final data blob being returned from the GraphQL query. Each middleware builds up the `ctx.res` object which gets sent as the GraphQL JSON response after all the middlewares resolve.
+The below code shows how we use dot notation "routes" to scope our resolves to properties on a given GraphQL query. For instance `on('query.film')` will run the middleware callback if someone sends `query { film { ... } }`, and skips that middleware if someone sends `query { person { ... } }` for instance. The middleware functions must return a promise (in anticipation of async/await support) and will execute in the order they are `.on`ed (awaiting the previous promise).
+
+Finally notice how we mutate `ctx.res` in each middleware. This is how you resolve queries in JoiQL—the `ctx.res` object represents the final data blob being returned from the GraphQL query. Each middleware builds up the `ctx.res` object which gets sent as the GraphQL JSON response after all the middlewares resolve.
 
 ````javascript
-
 api.on('query.film', (ctx) => {
   ctx.res.film = { title: 'bar' }
   return Promise.resolve()
@@ -126,7 +130,54 @@ api.on('query.person.fields.films', (ctx) => {
 })
 ````
 
-### Examples
+## API
+
+### ctx.req
+
+An object representing the parsed GraphQL query scoped to the "route". For instance a query like...
+
+```
+mutation {
+  artwork(
+    title: "Skull"
+    date: "1976-02-01T05:00:00.000Z"
+  ) {
+    title
+  }
+}
+```
+
+Would be parsed into an object that looks like
+
+```
+{
+  mutation: {
+    artwork: {
+      args: {
+        title: "Skull",
+        date: "1976-02-01T05:00:00.000Z"
+      },
+      fields: {
+        title: { args: {}, fields {} }
+      }
+    }
+  }
+}
+```
+
+### ctx.res
+
+An object passed through middleware used to build up the final response.
+
+### ctx.state
+
+The recommended namespace for passing information through middleware.
+
+### ctx.end()
+
+End the request and middleware stack early.
+
+## Examples
 
 Right now the /examples folder contains a playground of ideas being explored. To get set up install node modules `npm i` and use `npm run example examples/app` to boot up a GraphQL server mounting JoiQL schemas.
 
