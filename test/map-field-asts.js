@@ -1,4 +1,4 @@
-const { describe, it } = global // For linting
+/* eslint-env mocha */
 const mapFieldASTs = require('../lib/map-field-asts')
 const { string, number, object } = require('joi')
 const { parse } = require('graphql/language')
@@ -30,10 +30,7 @@ describe('mapFieldASTs', () => {
     (() => getQuery(
       object({
         person: object({ name: string() }).meta({
-          args: {
-            name: string(),
-            age: number().min(0).max(100)
-          }
+          args: { age: number().min(1).max(100) }
         })
       }),
       `{

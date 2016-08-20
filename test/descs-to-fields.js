@@ -1,4 +1,4 @@
-const { describe, it } = global // For linting
+/* eslint-env mocha */
 const descsToFields = require('../lib/descs-to-fields')
 const { string, number, object, array, boolean, date } = require('joi')
 
