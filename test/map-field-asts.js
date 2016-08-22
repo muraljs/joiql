@@ -40,4 +40,6 @@ describe('mapFieldASTs', () => {
       }`
     )).should.throw()
   })
+
+  xit('doesnt choke when missing a description')
 })
