@@ -209,6 +209,7 @@ The ./examples/artsy folder is quick attempt at replicating behavior of Artsy's 
 
 ## TODO
 
-* Middleware design still needs work... consider bi-direction using `next` like Koa, also maybe "immutable" return `res` object Redux-style instead?
+* Koa style downstream/upstream using `next`
+* Remove routing, and keep this low-level like Koa
 * Figure out how to do circular dependencies (ideally with Joi `lazy`)
 * Better errors (right now one error batches up the same response for every query)
