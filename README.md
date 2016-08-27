@@ -108,29 +108,21 @@ const api = joiql({
 graphql(api.schema, ...)
 ````
 
-Unlike GraphQL.js, JoiQL resolves schemas all at once through middleware at the root level—using dot notation "routing" to scope granular resolves to properties. This has a number of exciting benefits for resuability, composability, pluggability, and other abstract design pattern stuff like that which is yet to be fully explored/explained. Peruse some stuff in /examples to see how we use middleware to elegantly add things like logging, caching, automagic query to REST/Database call conversion, etc.
+Unlike GraphQL.js, JoiQL resolves schemas all at once through [Koa 2](https://github.com/koajs/koa)-like middleware at the root level. This has a number of exciting benefits for resuability, composability, pluggability, and other abstract design pattern stuff like that which is yet to be fully explored/explained. Peruse some stuff in /examples to see how we use middleware to elegantly add things like logging, caching, automatic GraphQL query to REST/Database call conversion, etc.
 
-The below code shows how we use dot notation "routes" to scope our resolves to properties on a given GraphQL query. For instance `on('query.film')` will run the middleware callback if someone sends `query { film { ... } }`, and skips that middleware if someone sends `query { person { ... } }` for instance. The middleware functions must return a promise (in anticipation of async/await support) and will execute in the order they are `.on`ed (awaiting the previous promise).
+Middleware functions resolve in the same way Koa 2 middleware does. Calling `next` will pass control to the next middleware function and `await` the rest of the downstream middleware code to finish. Once the downstream middleware code is finished, control flows back upstream resolving the `await`ed middleware code.
 
-Finally notice how we mutate `ctx.res` in each middleware. This is how you resolve queries in JoiQL—the `ctx.res` object represents the final data blob being returned from the GraphQL query. Each middleware builds up the `ctx.res` object which gets sent as the GraphQL JSON response after all the middlewares resolve.
+Finally notice how we mutate `ctx.res`. This is how you resolve queries in JoiQL—the `ctx.res` object represents the final data blob being returned from the GraphQL query. Each middleware builds up the `ctx.res` object which gets sent as the GraphQL JSON response after all the middlewares resolve.
 
 ````javascript
-api.on('query.film', (ctx) => {
-  ctx.res.film = { title: 'bar' }
-  return Promise.resolve()
+api.use(async (ctx, next) => {
+  const start = new Date()
+  await next()
+  const ms = new Date - start
+  console.log(`Request took ${ms}`)
 })
-
-api.on('query.person', (ctx) => {
-  ctx.res.person = { name: 'Spike Jonze' }
-  return Promise.resolve()
-})
-
-api.on('query.person.fields.films', (ctx) => {
-  ctx.res.person.films = [
-    { title: 'Her', producers: ['Annapurna'] },
-    { title: 'Adaptation', producers: ['Kaufman'] }
-  ]
-  return Promise.resolve()
+api.use(async (ctx) => {
+  ctx.res.person = await Person.findOne({ id: ctx.req.query.person.id })
 })
 ````
 
@@ -138,7 +130,7 @@ api.on('query.person.fields.films', (ctx) => {
 
 ### ctx.req
 
-An object representing the parsed GraphQL, For instance a query like...
+An object representing the parsed GraphQL query, For instance a query like...
 
 ```
 mutation {
@@ -169,28 +161,6 @@ Would be parsed into an object that looks like
 }
 ```
 
-When scoping to a route the `ctx.req` object is also scoped to that field.
-
-e.g. Given the example above, using...
-
-````javascript
-api.on('mutation.artwork', ...)
-````
-
-...would provide a `ctx.req` object that looks like...
-
-````
-{
-  args: {
-    title: "Skull",
-    date: "1976-02-01T05:00:00.000Z"
-  },
-  fields: {
-    title: { args: {}, fields {} }
-  }
-}
-````
-
 ### ctx.res
 
 An object passed through middleware used to build up the final response.
@@ -199,17 +169,11 @@ An object passed through middleware used to build up the final response.
 
 The recommended namespace for passing information through middleware.
 
-### ctx.end()
-
-End the request and middleware stack early.
-
 ## Examples
 
 Right now the /examples folder contains a playground of ideas being explored. To get set up install node modules `npm i` and use `npm run example examples/app` to boot up a GraphQL server mounting JoiQL schemas.
 
 The ./examples/app folder shows a basic example of how one can quickly build a full database backed API with minimal boilerplate using JoiQL. Try copy/pasting the `article` or `vertical` schema into a new resource to see how quickly one can add full, validated, CRUD operations to a new resource. `db.js` is a set of middleware that introspects the full GraphQL query and converts it to database operations (using a fake db in memory—but you can imagine how easy it would be to replace that with real database operations on a PostgreSQL or Mongo).
-
-The ./examples/artsy folder is quick attempt at replicating behavior of Artsy's GraphQL API [Metaphysics](https://github.com/artsy/metaphysics). You will need to copy `.env.example` to a `.env` file filling in the missing environment variables to run this. Notice how we use middleware to generically convert schemas to REST requests sent to Arty's API and how we use caching middleware to elegantly cache aggregated responses without the need for [DataLoader](https://github.com/facebook/dataloader) trickery.
 
 ## TODO
 
