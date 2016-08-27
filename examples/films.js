@@ -12,7 +12,9 @@ const Film = object({
 const Person = object({
   name: string(),
   films: array().items(Film)
-}).meta({
+})
+// .args({ id: number().required() })
+.meta({
   args: { id: number().required() }
 })
 
@@ -24,22 +26,22 @@ const api = joiql({
   }
 })
 
-// Middleware to resolve the request
-// (returning promises to mimic async functions)
-api.on('query.film', (ctx) => {
+// Koa 2 style middleware to resolve the request
+// (using promises in anticipation of async/await)
+api.use((ctx, next) => {
   ctx.res.film = { title: 'Paul Blart Mall Cop' }
-  return Promise.resolve()
+  return next()
 })
-api.on('query.person', (ctx) => {
+api.use((ctx, next) => {
   ctx.res.person = { name: 'Spike Jonze' }
-  return Promise.resolve()
+  return next()
 })
-api.on('query.person.fields.films', (ctx) => {
+api.use((ctx, next) => {
   ctx.res.person.films = [
     { title: 'Her', producers: ['Annapurna'] },
     { title: 'Adaptation', producers: ['Kaufman'] }
   ]
-  return Promise.resolve()
+  return next()
 })
 
 // Mount schema to express

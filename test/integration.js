@@ -31,9 +31,9 @@ const api = joiql({
   }
 })
 
-api.on('query.person', (ctx) => {
-  ctx.res.person = db[ctx.req.args.id]
-  return Promise.resolve()
+api.use((ctx, next) => {
+  ctx.res.person = db[ctx.req.query.person.args.id]
+  return next()
 })
 
 describe('joiql', () => {

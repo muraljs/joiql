@@ -1,6 +1,6 @@
 {
   "name": "joiql",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Make GraphQL schema creation and data validation easy with Joi.",
   "main": "index.js",
   "scripts": {
@@ -12,6 +12,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "koa-compose": "^3.1.0",
     "lodash": "^4.13.1"
   },
   "peerDependencies": {

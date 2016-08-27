@@ -16,9 +16,8 @@ const api = joiql({
   }
 })
 
-api.on('query', db.fetch)
-api.on('mutation', db.save)
-api.on('query mutation', db.log)
+api.use(db.log)
+api.use(db.persist)
 
 app.use('/graphql', graphqlHTTP({
   schema: api.schema,

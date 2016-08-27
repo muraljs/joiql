@@ -6,7 +6,7 @@
 //
 const { GraphQLSchema, GraphQLObjectType } = require('graphql')
 const { mapValues } = require('lodash')
-const { addRoute, buildMiddlewares } = require('./lib/middleware')
+const { buildMiddlewares, addMiddleware } = require('./lib/middleware')
 const descsToFields = require('./lib/descs-to-fields')
 
 // Converts the { key: JoiSchema } pairs to a GraphQL.js schema object
@@ -36,7 +36,7 @@ const joiSchemasToGraphQLSchema = (jois, resolveMiddlewares) => {
 // Generates the JoiQL library API that returns the GraphQL.js schema and
 // provides an `.on` API for mounting resolve middlewares
 module.exports = (jois) => {
-  const middleware = []
-  const schema = joiSchemasToGraphQLSchema(jois, buildMiddlewares(middleware))
-  return { schema, on: addRoute(middleware) }
+  const middlewares = []
+  const schema = joiSchemasToGraphQLSchema(jois, buildMiddlewares(middlewares))
+  return { schema, use: addMiddleware(middlewares) }
 }

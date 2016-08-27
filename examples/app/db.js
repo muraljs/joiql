@@ -16,22 +16,15 @@ const db = {
     })
 }
 
-exports.fetch = ({ req, res }) => {
-  const promises = map(req, ({ args }, col) => {
-    return db.findOne(col, args.id).then((doc) => { res[col] = doc })
-  })
-  return Promise.all(promises)
+exports.persist = (ctx, next) => {
+  const finds = map(ctx.req.query, ({ args }, col) =>
+    db.findOne(col, args.id).then((doc) => { ctx.res[col] = doc }))
+  const saves = map(ctx.req.mutation, ({ args }, col) =>
+    db.save(col, args).then((doc) => { ctx.res[col] = doc }))
+  return Promise.all(finds.concat(saves)).then(next)
 }
 
-exports.save = ({ req, res }) => {
-  const promises = map(req, ({ args }, col) => {
-    return db.save(col, args).then((doc) => { res[col] = doc })
-  })
-  return Promise.all(promises)
+exports.log = (ctx, next) => {
+  const start = new Date().getTime()
+  return next().then(() => console.log('Request took ', new Date().getTime() - start))
 }
-
-exports.log = ({ res }) => {
-  return Promise.resolve()
-}
-
-exports.db = db

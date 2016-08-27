@@ -9,8 +9,10 @@ Make [GraphQL](http://graphql.org/) schema creation and data validation easy wit
 Run this using `npm run example examples/films`...
 
 ````javascript
-const { object, string, number, array, date } = require('joi')
 const joiql = require('../')
+const { object, string, number, array, date } = require('joi')
+const app = require('express')()
+const graphqlHTTP = require('express-graphql')
 
 // Joi Schemas
 const Film = object({
@@ -33,29 +35,31 @@ const api = joiql({
   }
 })
 
-// Middleware to resolve the request
-// (returning promises to mimic async functions)
-api.on('query.film', (ctx) => {
+// Koa 2 style middleware to resolve the request
+// (using promises in anticipation of async/await)
+api.use((ctx, next) => {
   ctx.res.film = { title: 'Paul Blart Mall Cop' }
-  return Promise.resolve()
+  return next()
 })
-api.on('query.person', (ctx) => {
+api.use((ctx, next) => {
   ctx.res.person = { name: 'Spike Jonze' }
-  return Promise.resolve()
+  return next()
 })
-api.on('query.person.fields.films', (ctx) => {
+api.use((ctx, next) => {
   ctx.res.person.films = [
     { title: 'Her', producers: ['Annapurna'] },
     { title: 'Adaptation', producers: ['Kaufman'] }
   ]
-  return Promise.resolve()
+  return next()
 })
 
-// Use the GraphQL.js schema object to mount in say Express
+// Mount schema to express
 app.use('/graphql', graphqlHTTP({
   schema: api.schema,
   graphiql: true
 }))
+app.listen(3000, () => console.log('listening on 3000'))
+
 ````
 
 ## Breaking it down
@@ -209,7 +213,5 @@ The ./examples/artsy folder is quick attempt at replicating behavior of Artsy's 
 
 ## TODO
 
-* Koa style downstream/upstream using `next`
-* Remove routing, and keep this low-level like Koa
 * Figure out how to do circular dependencies (ideally with Joi `lazy`)
 * Better errors (right now one error batches up the same response for every query)
