@@ -179,3 +179,11 @@ The ./examples/app folder shows a basic example of how one can quickly build a f
 
 * Figure out how to do circular dependencies (ideally with Joi `lazy`)
 * Better errors (right now one error batches up the same response for every query)
+
+## Contributing
+
+Please fork the project and submit a pull request with tests. Install node modules `npm install` and run tests with `npm test`.
+
+## License
+
+MIT
