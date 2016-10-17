@@ -1,7 +1,5 @@
 # joiql
 
-**NOTE: This is a WIP and not production ready yet**
-
 Make [GraphQL](http://graphql.org/) schema creation and data validation easy with [Joi](https://github.com/hapijs/joi).
 
 ## Example
