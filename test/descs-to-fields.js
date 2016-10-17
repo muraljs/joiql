@@ -1,6 +1,6 @@
 /* eslint-env mocha */
 const descsToFields = require('../lib/descs-to-fields')
-const { string, number, object, array, boolean, date } = require('joi')
+const { string, number, object, array, boolean, date, alternatives } = require('joi')
 
 describe('descsToFields', () => {
   it('converts a joi string to GraphQL string', () => {
@@ -31,6 +31,23 @@ describe('descsToFields', () => {
       })).describe()
     })
     fields.arr.type.constructor.name.should.equal('GraphQLList')
+  })
+
+  it('converts alternatives to a union', () => {
+    const video = object({
+      type: string().valid('video'),
+      url: string(),
+      background_color: string()
+    })
+    const image = object({
+      type: string().valid('image'),
+      url: string(),
+      position: string()
+    })
+    const fields = descsToFields({
+      hero: alternatives().try(video, image).describe()
+    })
+    fields.hero.type.constructor.name.should.equal('GraphQLUnionType')
   })
 
   it('names object types by the meta name', () => {
