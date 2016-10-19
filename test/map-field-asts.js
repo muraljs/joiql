@@ -14,16 +14,26 @@ describe('mapFieldASTs', () => {
     const query = getQuery(
       object({
         hello: object({
-          world: string()
+          world: string(),
+          metadata: object({
+            email: string(),
+            name: string()
+          })
         })
       }),
       `{
         hello {
           world
+          metadata {
+            email
+            name
+          }
         }
       }`
     )
     query.hello.fields.world.fields.should.be.empty()
+    query.hello.fields.metadata.fields.email.fields.should.be.empty()
+    query.hello.fields.metadata.fields.name.fields.should.be.empty()
   })
 
   xit('validates arguments', () => {
