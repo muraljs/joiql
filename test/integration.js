@@ -50,4 +50,6 @@ describe('joiql', () => {
       res.errors[0].message.should.containEql('child "age" fails')
     })
   })
+
+  it('clones ctx to avoid stateful bugs')
 })

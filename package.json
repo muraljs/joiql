@@ -1,6 +1,6 @@
 {
   "name": "joiql",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Make GraphQL schema creation and data validation easy with Joi.",
   "main": "index.js",
   "scripts": {
@@ -25,7 +25,9 @@
     "dotenv": "^2.0.0",
     "express": "^4.14.0",
     "express-graphql": "^0.5.3",
+    "graphql": "^0.7.2",
     "growl": "^1.9.2",
+    "joi": "^9.2.0",
     "mocha": "^2.5.3",
     "should": "^10.0.0",
     "standard": "^7.1.2",
