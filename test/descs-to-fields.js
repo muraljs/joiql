@@ -140,7 +140,7 @@ describe('descsToFields', () => {
 
   it('does not hold on to state', (done) => {
     const final = after(3, (req) => {
-      keys(req).join('').should.equal('bar')
+      keys(req).join('').should.equal('baz')
       done()
     })
     const fields = descsToFields({
