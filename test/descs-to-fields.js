@@ -10,7 +10,7 @@ const {
   date,
   alternatives
 } = require('joi')
-const { after, keys } = require('lodash')
+const { after, keys, random } = require('lodash')
 
 describe('descsToFields', () => {
   it('converts a joi string to GraphQL string', () => {
@@ -140,16 +140,18 @@ describe('descsToFields', () => {
 
   it('does not hold on to state', (done) => {
     const final = after(3, (req) => {
-      keys(req).join('').should.equal('baz')
-      done()
+      keys(req).length.should.equal(1)
+      setTimeout(done, 10)
     })
     const fields = descsToFields({
       foo: string().describe(),
       bar: string().describe(),
       baz: string().describe()
     }, (req) => {
-      final(req)
-      return Promise.resolve()
+      return new Promise((resolve) => setTimeout(() => {
+        final(req)
+        resolve()
+      }, random(0, 50)))
     })
     const query = new GraphQLObjectType({
       name: 'RootQueryType',
