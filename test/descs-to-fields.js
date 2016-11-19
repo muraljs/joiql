@@ -1,6 +1,16 @@
 /* eslint-env mocha */
 const descsToFields = require('../lib/descs-to-fields')
-const { string, number, object, array, boolean, date, alternatives } = require('joi')
+const { GraphQLSchema, GraphQLObjectType, graphql } = require('graphql')
+const {
+  string,
+  number,
+  object,
+  array,
+  boolean,
+  date,
+  alternatives
+} = require('joi')
+const { after, keys, random } = require('lodash')
 
 describe('descsToFields', () => {
   it('converts a joi string to GraphQL string', () => {
@@ -123,8 +133,33 @@ describe('descsToFields', () => {
     const blocks = fields.article.type._typeConfig.fields.blocks
     blocks.type.constructor.name.should.equal('GraphQLList')
     blocks.type.ofType.constructor.name.should.equal('GraphQLUnionType')
-    const [img, text] = blocks.type.ofType._types
+    const [img, text] = blocks.type.ofType._typeConfig.types
     img._typeConfig.fields.size.type.name.should.equal('Int')
     text._typeConfig.fields.body.type.name.should.equal('String')
+  })
+
+  it('does not hold on to state', (done) => {
+    const final = after(3, (req) => {
+      keys(req).length.should.equal(1)
+      setTimeout(done, 10)
+    })
+    const fields = descsToFields({
+      foo: string().describe(),
+      bar: string().describe(),
+      baz: string().describe()
+    }, (req) => {
+      return new Promise((resolve) => setTimeout(() => {
+        final(req)
+        resolve()
+      }, random(0, 50)))
+    })
+    const query = new GraphQLObjectType({
+      name: 'RootQueryType',
+      fields: fields
+    })
+    const schema = new GraphQLSchema({ query })
+    graphql(schema, '{ foo }')
+    setTimeout(() => graphql(schema, '{ bar }'), 10)
+    setTimeout(() => graphql(schema, '{ baz }'), 20)
   })
 })
