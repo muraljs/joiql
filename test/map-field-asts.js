@@ -36,6 +36,32 @@ describe('mapFieldASTs', () => {
     query.hello.fields.metadata.fields.name.fields.should.be.empty()
   })
 
+  it('converts a parsed GraphQL query into a nice object with aliases', () => {
+    const query = getQuery(
+      object({
+        hello: object({
+          world: string(),
+          metadata: object({
+            email: string(),
+            name: string()
+          })
+        })
+      }),
+      `{
+        aliasName: hello {
+          world
+          metadata {
+            email
+            name
+          }
+        }
+      }`
+    )
+    query.aliasName.hello.fields.world.fields.should.be.empty()
+    query.aliasName.hello.fields.metadata.fields.email.fields.should.be.empty()
+    query.aliasName.hello.fields.metadata.fields.name.fields.should.be.empty()
+  })
+
   xit('validates arguments', () => {
     (() => getQuery(
       object({
