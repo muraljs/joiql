@@ -16,7 +16,7 @@ const graphqlHTTP = require('express-graphql')
 const Film = object({
   title: string(),
   producers: array().items(string()),
-  release_date: date()
+  releaseDate: date()
 })
 const Person = object({
   name: string(),
@@ -70,7 +70,7 @@ const { object, string, number, array, date } = require('joi')
 const Film = object({
   title: string(),
   producers: array().items(string()),
-  release_date: date()
+  releaseDate: date()
 })
 
 const Person = object({
