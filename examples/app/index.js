@@ -19,7 +19,7 @@ const api = joiql({
 api.use(db.log)
 api.use(db.persist)
 
-app.use('/graphql', graphqlHTTP({
+app.use('/', graphqlHTTP({
   schema: api.schema,
   graphiql: true
 }))

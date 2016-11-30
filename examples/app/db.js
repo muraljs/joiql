@@ -1,4 +1,4 @@
-const { map, uniqueId, assign } = require('lodash')
+const { map, uniqueId, assign, values, keys } = require('lodash')
 
 const _db = {}
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -17,8 +17,14 @@ const db = {
 }
 
 exports.persist = (ctx, next) => {
-  const finds = map(ctx.req.query, ({ args }, col) =>
-    db.findOne(col, args.id).then((doc) => { ctx.res[col] = doc }))
+  const finds = map(ctx.req.query, (branch, key) => {
+    const isAlias = !branch.args
+    const args = isAlias ? values(branch)[0].args : branch.args
+    const col = isAlias ? keys(branch)[0] : key
+    return db
+      .findOne(col, args.id)
+      .then((doc) => { ctx.res[key] = doc })
+  })
   const saves = map(ctx.req.mutation, ({ args }, col) =>
     db.save(col, args).then((doc) => { ctx.res[col] = doc }))
   return Promise.all(finds.concat(saves)).then(next)

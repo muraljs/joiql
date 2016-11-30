@@ -29,6 +29,8 @@ const api = joiql({
 // Koa 2 style middleware to resolve the request
 // (using promises in anticipation of async/await)
 api.use((ctx, next) => {
+  ctx.res.twb = { title: 'There will be blood' }
+  ctx.res.her = { title: 'Her' }
   ctx.res.film = { title: 'Paul Blart Mall Cop' }
   return next()
 })
@@ -45,7 +47,7 @@ api.use((ctx, next) => {
 })
 
 // Mount schema to express
-app.use('/graphql', graphqlHTTP({
+app.use('/', graphqlHTTP({
   schema: api.schema,
   graphiql: true
 }))
