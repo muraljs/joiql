@@ -115,6 +115,22 @@ describe('descsToFields', () => {
     fields.foo.description.should.equal('Just a foo')
   })
 
+  it('respects aliases', () => {
+    const resolve = descsToFields({
+      foo: string().description('Just a foo').describe()
+    }, (req) =>
+      Promise.resolve({
+        bar: 'A foo aliased as bar'
+      })
+    ).foo.resolve
+    const alias = { kind: 'Name', value: 'bar', loc: { start: 4, end: 7 } }
+    return resolve(null, {}, {}, {
+      fieldASTs: [{ alias, name: 'foo' }]
+    }).then((res) => {
+      res.should.equal('A foo aliased as bar')
+    })
+  })
+
   it('creates a union type for a multi array input', () => {
     const fields = descsToFields({
       article: object({
