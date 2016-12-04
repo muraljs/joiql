@@ -7,7 +7,7 @@ Make [GraphQL](http://graphql.org/) schema creation and data validation easy wit
 Run this using `node example`...
 
 ````javascript
-const joiql = require('../')
+const joiql = require('joiql')
 const { object, string, number, array, date } = require('joi')
 const app = require('express')()
 const graphqlHTTP = require('express-graphql')

@@ -1,8 +1,6 @@
 //
 // Takes an object of { key: JoiSchema } pairs to generate a GraphQL Schema.
 //
-const { GraphQLSchema, GraphQLObjectType } = require('graphql')
-const { mapValues } = require('lodash')
 const Joi = require('joi')
 const {
   uniqueId,
@@ -13,9 +11,12 @@ const {
   isEqual,
   assign,
   flatten,
-  isEmpty
+  isEmpty,
+  mapValues
 } = require('lodash')
 const {
+  GraphQLSchema,
+  GraphQLObjectType,
   GraphQLString,
   GraphQLFloat,
   GraphQLInt,

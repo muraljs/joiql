@@ -1,7 +1,6 @@
 /* eslint-env mocha */
 const rewire = require('rewire')
 const descsToFields = rewire('../').__get__('descsToFields')
-const { GraphQLSchema, GraphQLObjectType, graphql } = require('graphql')
 const {
   string,
   number,
@@ -11,7 +10,6 @@ const {
   date,
   alternatives
 } = require('joi')
-const { after, keys, random } = require('lodash')
 
 describe('descsToFields', () => {
   it('converts a joi string to GraphQL string', () => {
