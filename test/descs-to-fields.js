@@ -1,5 +1,6 @@
 /* eslint-env mocha */
-const descsToFields = require('../lib/descs-to-fields')
+const rewire = require('rewire')
+const descsToFields = rewire('../').__get__('descsToFields')
 const { GraphQLSchema, GraphQLObjectType, graphql } = require('graphql')
 const {
   string,
@@ -115,22 +116,6 @@ describe('descsToFields', () => {
     fields.foo.description.should.equal('Just a foo')
   })
 
-  it('respects aliases', () => {
-    const resolve = descsToFields({
-      foo: string().description('Just a foo').describe()
-    }, (req) =>
-      Promise.resolve({
-        bar: 'A foo aliased as bar'
-      })
-    ).foo.resolve
-    const alias = { kind: 'Name', value: 'bar', loc: { start: 4, end: 7 } }
-    return resolve(null, {}, {}, {
-      fieldASTs: [{ alias, name: 'foo' }]
-    }).then((res) => {
-      res.should.equal('A foo aliased as bar')
-    })
-  })
-
   it('creates a union type for a multi array input', () => {
     const fields = descsToFields({
       article: object({
@@ -152,30 +137,5 @@ describe('descsToFields', () => {
     const [img, text] = blocks.type.ofType._typeConfig.types
     img._typeConfig.fields.size.type.name.should.equal('Int')
     text._typeConfig.fields.body.type.name.should.equal('String')
-  })
-
-  it('does not hold on to state', (done) => {
-    const final = after(3, (req) => {
-      keys(req).length.should.equal(1)
-      setTimeout(done, 10)
-    })
-    const fields = descsToFields({
-      foo: string().describe(),
-      bar: string().describe(),
-      baz: string().describe()
-    }, (req) => {
-      return new Promise((resolve) => setTimeout(() => {
-        final(req)
-        resolve()
-      }, random(0, 50)))
-    })
-    const query = new GraphQLObjectType({
-      name: 'RootQueryType',
-      fields: fields
-    })
-    const schema = new GraphQLSchema({ query })
-    graphql(schema, '{ foo }')
-    setTimeout(() => graphql(schema, '{ bar }'), 10)
-    setTimeout(() => graphql(schema, '{ baz }'), 20)
   })
 })
