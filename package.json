@@ -1,34 +1,28 @@
 {
   "name": "joiql",
-  "version": "0.0.12",
+  "version": "0.1.0",
   "description": "Make GraphQL schema creation and data validation easy with Joi.",
   "main": "index.js",
   "scripts": {
-    "test": "npm run mocha && standard",
+    "test": "standard && npm run mocha",
     "mocha": "mocha -r should",
-    "b": "browserify script.js -o bundle.js -t [ babelify --presets [ es2015 ] ]",
-    "example": "node -r dotenv/config -r ./lib/bluebird.js"
+    "b": "browserify script.js -o bundle.js -t [ babelify --presets [ es2015 ] ]"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "koa-compose": "^3.1.0",
+    "graphql": "^0.7.2",
     "lodash": "^4.13.1"
   },
   "peerDependencies": {
-    "graphql": "^0.6.1",
     "joi": "^9.0.0"
   },
   "devDependencies": {
-    "artsy-xapp": "^1.0.4",
-    "bluebird": "^3.4.1",
-    "dotenv": "^2.0.0",
     "express": "^4.14.0",
     "express-graphql": "^0.5.3",
-    "graphql": "^0.7.2",
-    "growl": "^1.9.2",
     "joi": "^9.2.0",
     "mocha": "^2.5.3",
+    "rewire": "^2.5.2",
     "should": "^10.0.0",
     "standard": "^7.1.2",
     "superagent": "^2.1.0"
