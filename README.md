@@ -20,7 +20,7 @@ const Film = object({
   }),
   release_date: date()
 }).meta({
-  resolve: () => ({ title: 'Her' })
+  resolve: (root, args, req, ast) => ({ title: 'Her' })
 })
 
 const Person = object({
@@ -28,7 +28,7 @@ const Person = object({
   films: array().items(Film)
 }).meta({
   args: { id: number().required() },
-  resolve: () => ({ name: 'Spike Jonze' })
+  resolve: (root, args, req, ast) => ({ name: 'Spike Jonze' })
 })
 
 // Convert Joi schemas to GraphQL
