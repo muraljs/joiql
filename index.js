@@ -169,7 +169,7 @@ const validatedResolve = (desc) => (source, args, root, opts) => {
     return resolve(source, value, root, opts)
   }
   if (resolve) return resolve(source, args, root, opts)
-  else return source[opts.fieldASTs[0].name.value]
+  else return source && source[opts.fieldASTs[0].name.value]
 }
 
 // Convert a hash of descriptions into an object appropriate to put in a
