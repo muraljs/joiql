@@ -46,4 +46,15 @@ describe('joiql', () => {
       res.errors[0].message.should.containEql('child "age" fails')
     })
   })
+
+  it('works without args', () => {
+    const schema = joiql({
+      query: {
+        hello: string().meta({ resolve: () => 'world' })
+      }
+    })
+    return graphql(schema, '{ hello }').then((res) => {
+      res.data.hello.should.equal('world')
+    })
+  })
 })

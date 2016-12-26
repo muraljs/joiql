@@ -161,14 +161,15 @@ const descToArgs = (desc) => {
 
 // Wraps a resolve function specifid in a Joi schema to add validation.
 const validatedResolve = (desc) => (source, args, root, opts) => {
+  const resolve = desc.meta && desc.meta[0].resolve
   if (args && !isEmpty(args)) {
-    const resolve = desc.meta && desc.meta[0].resolve
     const argsSchema = map(desc.meta, 'args')[0]
     const { value, error } = Joi.validate(args, argsSchema)
     if (error) throw error
     return resolve(source, value, root, opts)
   }
-  return source[opts.fieldASTs[0].name.value]
+  if (resolve) return resolve(source, args, root, opts)
+  else return source[opts.fieldASTs[0].name.value]
 }
 
 // Convert a hash of descriptions into an object appropriate to put in a
