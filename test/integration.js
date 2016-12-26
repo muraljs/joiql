@@ -57,4 +57,16 @@ describe('joiql', () => {
       res.data.hello.should.equal('world')
     })
   })
+
+  it('works without args or resolves', () => {
+    const schema = joiql({
+      query: {
+        hello: string()
+      }
+    })
+    return graphql(schema, '{ hello }').then((res) => {
+      (res.data.hello === null).should.be.ok()
+      ;(typeof undefined).should.equal('undefined')
+    })
+  })
 })

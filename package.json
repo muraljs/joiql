@@ -1,6 +1,6 @@
 {
   "name": "joiql",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Make GraphQL schema creation and data validation easy with Joi.",
   "main": "index.js",
   "scripts": {
