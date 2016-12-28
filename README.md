@@ -15,12 +15,8 @@ const graphqlHTTP = require('express-graphql')
 // Joi Schemas
 const Film = object({
   title: string(),
-  producers: array().items(string()).meta({
-    resolve: () => ['']
-  }),
+  producers: array().items(string()),
   release_date: date()
-}).meta({
-  resolve: (root, args, req, ast) => ({ title: 'Her' })
 })
 
 const Person = object({
