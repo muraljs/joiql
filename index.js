@@ -12,7 +12,9 @@ const {
   assign,
   flatten,
   isEmpty,
-  mapValues
+  mapValues,
+  omitBy,
+  isNull
 } = require('lodash')
 const {
   GraphQLSchema,
@@ -27,6 +29,13 @@ const {
   GraphQLNonNull
 } = require('graphql')
 
+// Convenience helpers to determine a Joi schema's
+// "presence", e.g. required or forbidden
+const presence = (desc, name) =>
+  desc.flags &&
+  desc.flags.presence &&
+  desc.flags.presence === name
+
 // Cache converted types by their `meta({ name: '' })` property so we
 // don't end up with a litter of anonymously generated GraphQL types
 const cachedTypes = {}
@@ -39,12 +48,7 @@ const descToType = (desc, isInput) => {
     (isInput ? 'Input' : '') +
     (map(desc.meta, 'name')[0] || 'Anon' + uniqueId())
   )
-  const required = (
-    isInput &&
-    desc.flags &&
-    desc.flags.presence &&
-    desc.flags.presence === 'required'
-  )
+  const required = isInput && presence(desc, 'required')
   const type = {
     boolean: () => GraphQLBoolean,
     date: () => GraphQLString,
@@ -60,8 +64,10 @@ const descToType = (desc, isInput) => {
         type = new GraphQLInputObjectType({
           name: typeName,
           description: desc.description,
-          fields: mapValues(desc.children, (child) => (
-            { type: descToType(child, true) }))
+          fields: omitBy(mapValues(desc.children, (child) => {
+            if (presence(child, 'forbidden')) return null
+            return { type: descToType(child, true) }
+          }), isNull)
         })
       } else {
         type = new GraphQLObjectType({
@@ -75,10 +81,11 @@ const descToType = (desc, isInput) => {
     },
     array: () => {
       let type
-      if (desc.items.length === 1) {
-        type = descToType(desc.items[0], isInput)
+      const items = desc.items.filter((item) => !presence(item, 'forbidden'))
+      if (items.length === 1) {
+        type = descToType(items[0], isInput)
       } else {
-        typeName = map(desc.items, (d) => {
+        typeName = map(items, (d) => {
           const name = (
             (d.meta && capitalize(d.meta.name)) ||
             capitalize(d.type) ||
@@ -89,9 +96,9 @@ const descToType = (desc, isInput) => {
         if (cachedTypes[typeName]) {
           type = cachedTypes[typeName]
         } else {
-          const types = desc.items.map((item) => descToType(item, isInput))
+          const types = items.map((item) => descToType(item, isInput))
           if (isInput) {
-            const children = desc.items.map((item) => item.children)
+            const children = items.map((item) => item.children)
             const fields = descsToFields(assign(...flatten(children)))
             type = new GraphQLInputObjectType({
               name: typeName,
@@ -106,7 +113,7 @@ const descToType = (desc, isInput) => {
               // TODO: Should use JOI.validate(), just looks at matching keys
               // We might need to pass schema here instead
               resolveType: (val) =>
-                find(map(desc.items, (item, i) =>
+                find(map(items, (item, i) =>
                   isEqual(keys(val), keys(item.children)) && types[i]))
             })
           }
@@ -117,10 +124,12 @@ const descToType = (desc, isInput) => {
     },
     alternatives: () => {
       let type
+      const alternatives = desc.alternatives
+        .filter((a) => !presence(a, 'forbidden'))
       if (cachedTypes[typeName]) return cachedTypes[typeName]
-      const types = desc.alternatives.map((item) =>
+      const types = alternatives.map((item) =>
         descToType(item, isInput))
-      const children = desc.alternatives.map((item) => item.children)
+      const children = alternatives.map((item) => item.children)
       const fields = descsToFields(assign(...flatten(children)))
       if (isInput) {
         type = new GraphQLInputObjectType({
@@ -134,7 +143,7 @@ const descToType = (desc, isInput) => {
           description: desc.description,
           types: types,
           resolveType: (val) =>
-            find(map(desc.alternatives, (item, i) => {
+            find(map(alternatives, (item, i) => {
               const isTypeOf = map(item.meta, 'isTypeOf')[0]
               if (isTypeOf) return isTypeOf(val) && types[i]
               // TODO: Should use JOI.validate(), just looks at matching keys
@@ -154,9 +163,12 @@ const descToType = (desc, isInput) => {
 // arguments
 const descToArgs = (desc) => {
   const argsSchema = map(desc.meta, 'args')[0]
-  return argsSchema && mapValues(argsSchema, (schema) => ({
-    type: descToType(schema.describe(), true)
-  }))
+  return argsSchema && omitBy(mapValues(argsSchema, (schema) => {
+    if (presence(schema.describe(), 'forbidden')) return null
+    return {
+      type: descToType(schema.describe(), true)
+    }
+  }), isNull)
 }
 
 // Wraps a resolve function specifid in a Joi schema to add validation.
@@ -175,12 +187,15 @@ const validatedResolve = (desc) => (source, args, root, opts) => {
 // Convert a hash of descriptions into an object appropriate to put in a
 // GraphQL.js `fields` key.
 const descsToFields = (descs, resolveMiddlewares = () => {}) =>
-  mapValues(descs, (desc) => ({
-    type: descToType(desc),
-    args: descToArgs(desc),
-    description: desc.description || '',
-    resolve: validatedResolve(desc)
-  }))
+  omitBy(mapValues(descs, (desc) => {
+    if (presence(desc, 'forbidden')) return null
+    return {
+      type: descToType(desc),
+      args: descToArgs(desc),
+      description: desc.description || '',
+      resolve: validatedResolve(desc)
+    }
+  }), isNull)
 
 // Converts the { key: JoiSchema } pairs to a GraphQL.js schema object
 module.exports = (jois) => {
