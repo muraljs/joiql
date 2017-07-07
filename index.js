@@ -93,31 +93,7 @@ const descToType = (desc, isInput) => {
           )
           return (isInput ? 'Input' : '') + name
         }).join('Or')
-        if (cachedTypes[typeName]) {
-          type = cachedTypes[typeName]
-        } else {
-          const types = items.map((item) => descToType(item, isInput))
-          if (isInput) {
-            const children = items.map((item) => item.children)
-            const fields = descsToFields(assign(...flatten(children)))
-            type = new GraphQLInputObjectType({
-              name: typeName,
-              description: desc.description,
-              fields: fields
-            })
-          } else {
-            type = new GraphQLUnionType({
-              name: typeName,
-              description: desc.description,
-              types: types,
-              // TODO: Should use JOI.validate(), just looks at matching keys
-              // We might need to pass schema here instead
-              resolveType: (val) =>
-                find(map(items, (item, i) =>
-                  isEqual(keys(val), keys(item.children)) && types[i]))
-            })
-          }
-        }
+        type = makeArrayAlternativeType(cachedTypes, isInput, typeName, desc, items)
       }
       if (!cachedTypes[typeName]) cachedTypes[typeName] = type
       return new GraphQLList(type)
@@ -126,37 +102,42 @@ const descToType = (desc, isInput) => {
       let type
       const alternatives = desc.alternatives
         .filter((a) => !presence(a, 'forbidden'))
-      if (cachedTypes[typeName]) return cachedTypes[typeName]
-      const types = alternatives.map((item) =>
-        descToType(item, isInput))
-      const children = alternatives.map((item) => item.children)
-      const fields = descsToFields(assign(...flatten(children)))
-      if (isInput) {
-        type = new GraphQLInputObjectType({
-          name: typeName,
-          description: desc.description,
-          fields: fields
-        })
-      } else {
-        type = new GraphQLUnionType({
-          name: typeName,
-          description: desc.description,
-          types: types,
-          resolveType: (val) =>
-            find(map(alternatives, (item, i) => {
-              const isTypeOf = map(item.meta, 'isTypeOf')[0]
-              if (isTypeOf) return isTypeOf(val) && types[i]
-              // TODO: Should use JOI.validate(), just looks at matching keys
-              // We might need to pass schema here instead
-              else return isEqual(keys(val), keys(item.children)) && types[i]
-            }))
-        })
-      }
-      cachedTypes[typeName] = type
+      type = makeArrayAlternativeType(cachedTypes, isInput, typeName, desc, alternatives)
+      if (!cachedTypes[typeName]) cachedTypes[typeName] = type
       return type
     }
   }[desc.type]()
   return required ? new GraphQLNonNull(type) : type
+}
+
+const makeArrayAlternativeType = (cachedTypes, isInput, typeName, desc, items) => {
+  const types = items.map((item) => descToType(item, isInput))
+
+  if (cachedTypes[typeName]) {
+    return cachedTypes[typeName]
+  } else if (isInput) {
+    const children = items.map((item) => item.children)
+    const fields = descsToFields(assign(...flatten(children)))
+    return new GraphQLInputObjectType({
+      name: typeName,
+      description: desc.description,
+      fields: fields
+    })
+  } else {
+    return new GraphQLUnionType({
+      name: typeName,
+      description: desc.description,
+      types: types,
+      resolveType: (val) =>
+        find(map(items, (item, i) => {
+          const isTypeOf = map(item.meta, 'isTypeOf')[0]
+          if (isTypeOf) return isTypeOf(val) && types[i]
+          // TODO: Should use JOI.validate(), just looks at matching keys
+          // We might need to pass schema here instead
+          else return isEqual(keys(val), keys(item.children)) && types[i]
+        }))
+    })
+  }
 }
 
 // Convert a Joi description's `meta({ args: {} })` to a GraphQL field's
