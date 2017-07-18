@@ -147,7 +147,7 @@ const validatedResolve = (schema) => (source, args, root, opts) => {
   const desc = schema.describe()
   const resolve = desc.meta && first(compact(map(desc.meta, 'resolve')))
   if (args && !isEmpty(args)) {
-    const argsSchema = map(desc.meta, 'args')[0]
+    const argsSchema = first(compact(map(desc.meta, 'args')))
     const value = Joi.attempt(args, argsSchema)
     return resolve(source, value, root, opts)
   }
@@ -222,7 +222,7 @@ const getTypeName = (schema, isInput) => {
     if (!typeName) {
       typeName = (
         (isInput ? 'Input' : '') +
-        (map(desc.meta, 'name')[0] || 'Anon' + uniqueId())
+        (first(compact(map(desc.meta, 'name'))) || 'Anon' + uniqueId())
       )
     }
 
