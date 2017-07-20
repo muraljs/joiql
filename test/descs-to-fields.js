@@ -13,17 +13,17 @@ const {
 
 describe('descsToFields', () => {
   it('converts a joi string to GraphQL string', () => {
-    const fields = descsToFields({ foo: string().describe() })
+    const fields = descsToFields({ foo: string() })
     fields.foo.type.name.should.equal('String')
   })
 
   it('converts various scalar types', () => {
     const fields = descsToFields({
-      str: string().describe(),
-      int: number().integer().describe(),
-      float: number().describe(),
-      bool: boolean().describe(),
-      date: date().describe()
+      str: string(),
+      int: number().integer(),
+      float: number(),
+      bool: boolean(),
+      date: date()
     })
     fields.str.type.name.should.equal('String')
     fields.int.type.name.should.equal('Int')
@@ -37,7 +37,7 @@ describe('descsToFields', () => {
       arr: array().items(object({
         a: string(),
         b: number()
-      })).describe()
+      }))
     })
     fields.arr.type.constructor.name.should.equal('GraphQLList')
   })
@@ -54,7 +54,7 @@ describe('descsToFields', () => {
       position: string()
     })
     const fields = descsToFields({
-      hero: alternatives().try(video, image).describe()
+      hero: alternatives().try(video, image)
     })
     fields.hero.type.constructor.name.should.equal('GraphQLUnionType')
   })
@@ -64,7 +64,7 @@ describe('descsToFields', () => {
       person: object({
         name: string(),
         age: number()
-      }).meta({ name: 'Person' }).describe()
+      }).meta({ name: 'Person' })
     })
     fields.person.type.name.should.equal('Person')
   })
@@ -74,7 +74,7 @@ describe('descsToFields', () => {
       person: object({
         name: string(),
         age: number()
-      }).meta({ args: { id: number().integer() } }).describe()
+      }).meta({ args: { id: number().integer() } })
     })
     fields.person.args.id.type.name.should.equal('Int')
   })
@@ -84,7 +84,7 @@ describe('descsToFields', () => {
       person: object({
         name: string(),
         age: number()
-      }).meta({ args: { id: number().integer().required() } }).describe()
+      }).meta({ args: { id: number().integer().required() } })
     })
     fields.person.args.id.type.constructor.name.should.equal('GraphQLNonNull')
   })
@@ -101,7 +101,7 @@ describe('descsToFields', () => {
             country: string()
           })
         }
-      }).describe()
+      })
     })
     fields.person.args.address.type.constructor.name
       .should.equal('GraphQLInputObjectType')
@@ -109,7 +109,7 @@ describe('descsToFields', () => {
 
   it('considers descriptions', () => {
     const fields = descsToFields({
-      foo: string().description('Just a foo').describe()
+      foo: string().description('Just a foo')
     })
     fields.foo.description.should.equal('Just a foo')
   })
@@ -127,13 +127,13 @@ describe('descsToFields', () => {
             body: string()
           })
         )
-      }).describe()
+      })
     })
-    const blocks = fields.article.type._typeConfig.fields.blocks
+    const blocks = fields.article.type._typeConfig.fields().blocks
     blocks.type.constructor.name.should.equal('GraphQLList')
     blocks.type.ofType.constructor.name.should.equal('GraphQLUnionType')
     const [img, text] = blocks.type.ofType._typeConfig.types
-    img._typeConfig.fields.size.type.name.should.equal('Int')
-    text._typeConfig.fields.body.type.name.should.equal('String')
+    img._typeConfig.fields().size.type.name.should.equal('Int')
+    text._typeConfig.fields().body.type.name.should.equal('String')
   })
 })

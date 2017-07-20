@@ -1,5 +1,5 @@
 /* eslint-env mocha */
-const { string, number, object, date, array, alternatives } = require('joi')
+const { string, number, object, date, array, alternatives, lazy } = require('joi')
 const { graphql } = require('graphql')
 const joiql = require('../')
 
@@ -16,11 +16,11 @@ const db = {
   }
 }
 
-const Person = object({
+let Person = object({
   id: string(),
   name: string(),
   birthday: date(),
-  age: number().integer()
+  age: lazy(() => number().integer())
 }).meta({
   args: { id: string().required(), age: number().min(1).max(100) },
   resolve: (source, args) => db[args.id]
@@ -43,7 +43,7 @@ describe('joiql', () => {
   it('validates args', () => {
     const query = '{ person(age: 0 id: "hillary") { name } }'
     return graphql(schema, query).then((res) => {
-      res.errors[0].message.should.containEql('child "age" fails')
+      res.errors[0].message.should.containEql('{\n  "id": "hillary",\n  "age" \u001b[31m[1]\u001b[0m: 0\n}\n\u001b[31m\n[1] "age" must be larger than or equal to 1\u001b[0m')
     })
   })
 
