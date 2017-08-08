@@ -14,7 +14,7 @@ const {
   isNull,
   fromPairs,
   compact,
-  first
+  last
 } = require('lodash')
 const {
   GraphQLSchema,
@@ -71,7 +71,7 @@ const descToType = (schema, isInput) => {
         type = new GraphQLObjectType({
           name: typeName,
           description: desc.description,
-          fields: () => descsToFields(mapValues(desc.children, (child, k) => Joi.reach(schema, k)))
+          fields: () => descsToFields(mapValues(desc.children, (child, k) => Joi.reach(schema, k)), isInput)
         })
       }
       cachedTypes[typeName] = type
@@ -108,7 +108,7 @@ const makeArrayAlternativeType = (cachedTypes, isInput, typeName, desc, items) =
     return cachedTypes[typeName]
   } else if (isInput) {
     const children = fromPairs(flatten(items.map((item) => map(item._inner.children, (c) => [c.key, c.schema]))))
-    const fields = descsToFields(children)
+    const fields = descsToFields(children, isInput)
     return new GraphQLInputObjectType({
       name: typeName,
       description: desc.description,
@@ -132,8 +132,7 @@ const makeArrayAlternativeType = (cachedTypes, isInput, typeName, desc, items) =
 // Convert a Joi description's `meta({ args: {} })` to a GraphQL field's
 // arguments
 const descToArgs = (schema) => {
-  const desc = schema.describe()
-  const argsSchema = first(compact(map(desc.meta, 'args')))
+  const argsSchema = getMeta(schema, 'args')
   return argsSchema && omitBy(mapValues(argsSchema, (schema) => {
     if (presence(schema.describe(), 'forbidden')) return null
     return {
@@ -145,9 +144,9 @@ const descToArgs = (schema) => {
 // Wraps a resolve function specifid in a Joi schema to add validation.
 const validatedResolve = (schema) => (source, args, root, opts) => {
   const desc = schema.describe()
-  const resolve = desc.meta && first(compact(map(desc.meta, 'resolve')))
+  const resolve = desc.meta && getMeta(schema, 'resolve')
   if (args && !isEmpty(args)) {
-    const argsSchema = first(compact(map(desc.meta, 'args')))
+    const argsSchema = getMeta(schema, 'args')
     const value = Joi.attempt(args, argsSchema)
     return resolve(source, value, root, opts)
   }
@@ -157,14 +156,14 @@ const validatedResolve = (schema) => (source, args, root, opts) => {
 
 // Convert a hash of descriptions into an object appropriate to put in a
 // GraphQL.js `fields` key.
-const descsToFields = (schemas, resolveMiddlewares = () => {}) =>
+const descsToFields = (schemas, isInput) =>
   omitBy(mapValues(schemas, (schema) => {
     const desc = (schema && schema.describe ? schema.describe() : schema)
     const cleanSchema = clean(schema)
     if (presence(desc, 'forbidden')) return null
     return {
-      type: descToType(cleanSchema),
-      args: descToArgs(cleanSchema),
+      type: descToType(cleanSchema, isInput),
+      args: descToArgs(cleanSchema, isInput),
       description: desc.description || '',
       resolve: validatedResolve(cleanSchema)
     }
@@ -199,17 +198,20 @@ const clean = (schema) => {
 }
 
 const getTypeName = (schema, isInput) => {
+  schema = clean(schema)
   const desc = schema.describe()
-  let typeName = first(compact(map(desc.meta, 'typeName')))
+  let typeName = getMeta(schema, 'typeName')
 
   if (!typeName) {
     switch (desc.type) {
       case 'array':
         const items = schema._inner.items.filter((item) => !presence(item.describe(), 'forbidden'))
+
         if (items.length > 1) {
-          typeName = map(items, (d) => {
+          typeName = map(items, (fieldSchema) => {
+            const d = fieldSchema.describe()
             const name = (
-              (d.meta && capitalize(d.meta.name)) ||
+              getMeta(fieldSchema, 'name') ||
               capitalize(d.type) ||
               'Anon' + uniqueId()
             )
@@ -222,7 +224,7 @@ const getTypeName = (schema, isInput) => {
     if (!typeName) {
       typeName = (
         (isInput ? 'Input' : '') +
-        (first(compact(map(desc.meta, 'name'))) || 'Anon' + uniqueId())
+        (getMeta(schema, 'name') || capitalize(desc.type) + uniqueId())
       )
     }
 
@@ -230,4 +232,10 @@ const getTypeName = (schema, isInput) => {
   }
 
   return typeName
+}
+
+const getMeta = (schema, key) => {
+  const desc = schema.describe()
+
+  return last(compact(map(desc.meta, key)))
 }
