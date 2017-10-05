@@ -10,6 +10,7 @@ const {
   flatten,
   isEmpty,
   mapValues,
+  omit,
   omitBy,
   isNull,
   fromPairs,
@@ -108,7 +109,12 @@ const makeArrayAlternativeType = (cachedTypes, isInput, typeName, desc, items) =
     return cachedTypes[typeName]
   } else if (isInput) {
     const children = fromPairs(flatten(items.map((item) => map(item._inner.children, (c) => [c.key, c.schema]))))
-    const fields = descsToFields(children)
+
+    // Strip resolvers from generated types
+    const fields = mapValues(descsToFields(children), (field) => {
+      return omit(field, 'resolve');
+    });
+
     return new GraphQLInputObjectType({
       name: typeName,
       description: desc.description,
