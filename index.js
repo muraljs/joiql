@@ -151,8 +151,8 @@ const validatedResolve = (schema) => (source, args, context, opts) => {
     const value = Joi.attempt(args, argsSchema)
     return resolve(source, value, context, opts)
   }
-  else return source && source[opts.fieldASTs[0].name.value]
   if (resolve) return resolve(source, args, context, opts)
+  else return source && source[opts.fieldNodes[0].name.value]
 }
 
 // Convert a hash of descriptions into an object appropriate to put in a
