@@ -10,6 +10,7 @@ const {
   flatten,
   isEmpty,
   mapValues,
+  omit,
   omitBy,
   isNull,
   fromPairs,
@@ -108,7 +109,12 @@ const makeArrayAlternativeType = (cachedTypes, isInput, typeName, desc, items) =
     return cachedTypes[typeName]
   } else if (isInput) {
     const children = fromPairs(flatten(items.map((item) => map(item._inner.children, (c) => [c.key, c.schema]))))
-    const fields = descsToFields(children)
+
+    // Strip resolvers from generated types
+    const fields = mapValues(descsToFields(children), (field) => {
+      return omit(field, 'resolve');
+    });
+
     return new GraphQLInputObjectType({
       name: typeName,
       description: desc.description,
@@ -143,16 +149,16 @@ const descToArgs = (schema) => {
 }
 
 // Wraps a resolve function specifid in a Joi schema to add validation.
-const validatedResolve = (schema) => (source, args, root, opts) => {
+const validatedResolve = (schema) => (source, args, context, opts) => {
   const desc = schema.describe()
   const resolve = desc.meta && first(compact(map(desc.meta, 'resolve')))
   if (args && !isEmpty(args)) {
     const argsSchema = first(compact(map(desc.meta, 'args')))
     const value = Joi.attempt(args, argsSchema)
-    return resolve(source, value, root, opts)
+    return resolve(source, value, context, opts)
   }
-  if (resolve) return resolve(source, args, root, opts)
-  else return source && source[opts.fieldASTs[0].name.value]
+  if (resolve) return resolve(source, args, context, opts)
+  else return source && source[opts.fieldNodes[0].name.value]
 }
 
 // Convert a hash of descriptions into an object appropriate to put in a
